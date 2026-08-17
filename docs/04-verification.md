@@ -157,6 +157,44 @@ past event.
 days and 66% over 7. A one-week read would have rejected a change that was
 justified. State the window with the number.
 
+## 4b. Proportion the evidence to the surface, and report only what you ran
+
+Prior art: `AGENTS.md` in `deepseek-ai/deepseek-harness` (read 2026-08-17). Three
+of its rules are sharper than anything we had written, and none of them is about
+that project specifically.
+
+- **"Report only commands run."** Not "tests pass" — *these* commands, this
+  output. The gap between the two is where a plausible summary of a run that
+  never happened lives.
+- **Match evidence to the surface.** Focused tests for behaviour, snapshots for
+  user-visible output, doc checks for docs, real end-to-end only for the
+  integration boundary. **"Never default to the full suite or repeat a passing
+  check."** A full-suite reflex reads as rigour and is mostly cost; it also
+  trains everyone to skip verification when it is expensive, which is exactly
+  when it matters.
+- **Distinguish a blocked check from a failed one.** When a command fails because
+  the environment denied credentials, network or IPC, that is **not** evidence
+  about the code. Their rule: *require sandbox evidence, and never bypass a
+  genuine failure or the sandbox under test.* A blocked check reported as a
+  failure sends you debugging the wrong thing; reported as a pass, it is a check
+  that cannot fail.
+
+## 4c. Give time-bound guidance an expiry condition in its own text
+
+Also from that file, and the most transferable idea in it. Its opening section is
+titled **"Pre-release stance: foundation over blast radius"** and its first
+sentence is **"Remove this section at the first tagged release."**
+
+The section states the condition under which it stops being true, inside itself.
+Nobody has to remember; a reader at the first release knows the paragraph is
+spent. Compare a rule that was written for a temporary situation and simply
+stays — which is how a document becomes confidently wrong about current state,
+the failure this whole repo exists to catch.
+
+**If guidance is contingent, write the contingency into it.** "Until X ships",
+"while Y is unavailable", "remove at the first Z". A rule with no expiry
+condition is claiming to be permanent, and most are not.
+
 ## 5. Counts in prose are claims with an expiry
 
 Write the command, not the number. ">100 clauses" was written twice from memory
@@ -206,3 +244,22 @@ Collected because they recur and each one silently converts failure into success
 - Command substitution assignment (`x="$(cmd)"`) propagates the failure under
   `set -e`. Fine when intended; fatal when the command legitimately returns
   non-zero (a validator reporting non-conformance).
+
+Four more, each paid for with a real incident:
+
+- **`rm -rf` on a name that matches nothing exits 0**, and then verifying the
+  deletion *with the same name* confirms itself. **Verify a deletion by size,
+  inode or a directory listing — never by the name you deleted with.**
+- **Editing a script while it is running.** bash reads the file by byte offset,
+  so truncating and rewriting in place (`>`, `write_text`) makes it execute the
+  wrong bytes from the edit point on — usually a partial line, occasionally a
+  valid but different command, and it **exits 0**. `sed -i` replaces the inode
+  and is safe; the convenient habits are the unsafe ones.
+- **`pkill -f <pattern>` matches the shell running `pkill`**, because the pattern
+  is in that process's own command line. A cleanup that kills its own session
+  looks exactly like the cleanup working. Use `pgrep` first, kill by PID, and
+  never pattern-kill from inside the process you are matching.
+- **A `while read` loop feeding a subprocess that also reads stdin.** `ffmpeg`
+  consumes the remainder of the loop's input; the loop processed 4 of 56 files
+  and exited 0. Pass `-nostdin` (or `< /dev/null`), and **reconcile the output
+  count against the input count** — the exit status will not tell you.

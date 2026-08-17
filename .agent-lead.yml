@@ -45,6 +45,24 @@ leads:
       Read as the same tier unless stated otherwise; if a fourth level is wanted,
       that is the owner's call, not a lead's.
 
+  - path: /tools
+    lead: co-owned
+    agents: [ria-lead, business-lead, personal-lead]
+    note: >-
+      Open-source tools, each carrying how far it was actually checked: RUN,
+      VERIFIED, READ or UNEVALUATED. Domain-neutral — the constraint tiers govern
+      what you may point a tool AT, not whether it works. A credit is not an
+      endorsement; entries that blur the two are how an untested tool reaches a
+      regulated pipeline.
+
+  - path: /research
+    lead: co-owned
+    agents: [ria-lead, business-lead, personal-lead]
+    note: >-
+      Sources behind the practices, with whether anyone read them. UNREAD entries
+      are kept deliberately, so a practice resting on an unread source is visible
+      rather than implied.
+
 # Cross-domain traffic
 #
 # Constraints NEST: Personal ⊂ Business ⊂ RIA. So a practice adopted at an inner
