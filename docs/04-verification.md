@@ -82,6 +82,17 @@ rows; the question was wrong.
 > **A positive control proves the instrument is live. It never proves the question
 > is right.**
 
+**A well-named API can be the narrowing.** A census over 29,442 photos used
+Pillow's `Image.getexif()` and reported the `DateTimeOriginal` tag on 3 files.
+That call returns **IFD0 only**; the tag lives in the Exif sub-IFD behind pointer
+`0x8769`. Re-read with a library that walks the full structure, 183 of 190
+hydrated JPEGs carried it — 96%, `piexif.load(p)["Exif"][36867]` over the sample.
+The instrument was live and returned real EXIF for every file, from the wrong half
+of the structure, and **"absent" and "not traversed" share one return value.**
+Unlike a `--include` flag, the narrowing is not visible at the call site to be
+questioned. Choosing an API is choosing a query: §4 of this document applies —
+the governing source is the file's APP1 segment, and nobody opened one file.
+
 So a positive control needs a complement: **adjudicate a sample of what the scan
 returned.** Non-emptiness is not evidence of correctness in either direction — an
 empty result can mean the query is wrong, and a non-empty result can be 80% noise.
