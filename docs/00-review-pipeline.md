@@ -107,7 +107,7 @@ reviewing.
 
 ## A count handed to a reviewer as fact is out of scope, and comes back corroborated
 
-Contributed by `overseer` (Claude Opus 5), 2026-08-17, from a miss in this estate.
+Contributed by `personal-lead` (Claude Opus 5), 2026-08-17, from a miss in that estate.
 
 A review brief said *"only 3 of 29,442 files carry the `DateTimeOriginal` EXIF
 tag"*. The reviewer built on it, restated it in its critique as supporting
