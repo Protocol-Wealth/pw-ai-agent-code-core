@@ -87,6 +87,24 @@ comm -12 <(sort /tmp/base-changed) <(sort /tmp/pr-changed)   # non-empty ⇒ re-
 
 Anything else re-reviews a diff that did not change.
 
+## Update the branch BEFORE reviewing, always
+
+Sequence matters, and getting it wrong costs a full cycle:
+
+```
+update branch onto base  →  review  →  adjudicate  →  attest  →  merge
+```
+
+**Not** review → attest → discover the branch is behind → update → re-review →
+re-attest. If the attestation is bound to the head sha (it should be), updating the
+branch changes the head and correctly invalidates everything you just did.
+
+This is cheap to get right and annoying to get wrong: the branch update is one API
+call, and doing it first costs nothing. Doing it last costs an entire review round
+plus the model time. Make it the first step of the pipeline, unconditionally —
+even when the branch looks current, because another PR may land while you are
+reviewing.
+
 ## Rounds, and when to stop
 
 Track findings per round. The number falling is the signal you want.
@@ -106,11 +124,26 @@ wrongly-shaped to re-verify, and the correct responses are:
   default. The individual fixes were all correct. The rate did not fall because
   the language was the problem.
 
-**A concrete escalation rule that works:** past ~5 rounds on the same artefact,
-stop patching and get an independent opinion from a *different* model — and ask it
-the structural question ("what is wrong here that neither of us has articulated?"),
-not the local one. Past ~7, treat splitting as the default and continuing as the
-thing needing justification.
+### The escalation ladder
+
+Concrete, and it works — each step is triggered by round count on the *same
+artefact*:
+
+| Rounds | Action |
+|---|---|
+| 1–4 | Normal: single adversarial reviewer, fix, re-review |
+| **~5** | Stop patching. Get an independent opinion from a **different model**, and ask it the **structural** question — *"what is wrong here that neither of us has articulated?"* — not the local one. Line-level reviewers saturate; they keep finding the next symptom |
+| **~7** | **Splitting becomes the default** and continuing is what needs justification. Also widen the reviewer set: run a second *and* third vendor over the same diff, keeping each one's findings under its own heading |
+
+The reason the structural question matters more than another pass: in the measured
+case, eleven rounds of correct individual fixes never lowered the finding rate,
+because the cause was the language the artefact was written in. No reviewer asked
+that question until one was asked it directly, and it answered in one paragraph.
+
+**Widening the reviewer set at round 7 is about decorrelation, not volume.** Adding
+a third pass from the *same* model mostly re-finds what you already have. Adding a
+different vendor is the only version of "more review" that buys new information —
+and even then, keep the outputs separate so you can see which reviewer earned it.
 
 ## Cost notes
 
