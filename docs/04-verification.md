@@ -27,9 +27,12 @@ existed for:
 
 Two more of the same family, worth naming because they look nothing alike:
 
-- A gate testing that a hash string was **non-empty**, while the caller filled that
-  value from a local render — so the gate, whose own error message said "fail
-  closed", could never fire on the production path.
+- A gate testing that a value was **non-empty**, where the caller always supplied a
+  locally-computed fallback for it. The gate's own error text said "fail closed";
+  it could not fire, because the thing it tested was unconditionally populated.
+  **Generalise this one:** any guard of the form `if (!x) block()` is only as
+  strong as the guarantee that `x` can actually be absent. Check the callers, not
+  the guard.
 - A drift check that treated *"the canonical path is a directory"* as a transport
   failure and exited with a degradable status. A directory listing is a
   **successful, well-formed answer** meaning the file is gone. Structural answers
