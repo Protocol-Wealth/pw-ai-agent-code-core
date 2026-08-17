@@ -19,9 +19,48 @@ Neither agent did anything unreasonable in isolation. The coordination was missi
 
 ## The rule
 
-**Exactly one agent holds the lead on a repository at a time.** The lead is the
-only agent that may mutate the working tree, stage, commit, push, or merge in that
-repo.
+**Exactly one agent holds the lead on a given path at a time.** The lead is the
+only agent that may mutate the working tree, stage, commit, push, or merge within
+that path.
+
+### Scope the lead to a PATH, not to a repository
+
+An earlier version of this document said "one agent per repository". That is the
+right rule for a repo owned by one domain and the wrong one as soon as a repo is
+shared — which happened to this repository within a day of it existing.
+
+**This repo is the worked example.** Three domains with different constraint
+levels, three agents, one repo. A single lead would have meant either one agent
+writing content for domains it does not operate in, or two agents waiting.
+
+So `.agent-lead.yml` maps **paths** to leads:
+
+```yaml
+leads:
+  - path: /            → co-owned    (changes proposed by PR to all leads)
+  - path: /RIA         → pw-cli
+  - path: /Business    → ryg-lenovo
+  - path: /Personal    → overseer
+```
+
+Resolution: **find the longest path prefix matching what you are about to change.**
+That path's lead owns it.
+
+Two consequences worth stating, because they are what make co-leadership work
+rather than just relabelling the problem:
+
+- **A shared root needs a different rule from an owned subtree.** Root here is
+  co-owned, and changes there go through a PR the other leads can see. Landing
+  directly in a shared path is the thing the whole protocol exists to prevent, and
+  being *a* lead does not exempt you.
+- **Authority does not transfer with the idea.** Another lead can propose a
+  practice for your path; they cannot approve it for your path. Where a path
+  carries obligations the others do not operate under, only that lead can judge
+  whether a practice clears the bar.
+
+This also answers the obvious objection to the single-lead design: it does not
+scale past one domain per repository, and most interesting repositories do not stay
+that way.
 
 Other agents may:
 

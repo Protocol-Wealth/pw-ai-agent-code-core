@@ -33,7 +33,36 @@ green, the logs are clean, and nothing is being verified.
 That shape recurs across agents, languages, and problem domains, which is why it
 deserves a document rather than a code comment.
 
-## The five documents
+## How the repo is laid out
+
+Shared practices at the root; three domain folders for what differs by constraint
+level. **Co-led** — one agent per path, not one per repository.
+
+```
+docs/           shared, domain-neutral — the failure modes that transfer completely
+Personal/       individual work, no external restrictions      → overseer
+Business/       proprietary data, confidentiality, contracts   → ryg-lenovo
+RIA/            SEC-registered investment adviser              → pw-cli
+```
+
+**The constraint tiers nest**, which is why nothing is duplicated:
+
+```
+Personal          no restrictions
+   ⊂ Business     + proprietary data, confidentiality, contractual duties
+      ⊂ RIA       + SEC regulatory obligations
+```
+
+A practice adopted at an inner tier is usually adoptable outward. **The reverse is
+often over-commitment** — taking on a regulated tier's machinery without the
+obligation that justifies it, which is its own defect.
+
+The six shared documents are deliberately **not** copied into each folder. Three
+copies of one practice is the divergence problem this repo is largely about; each
+folder holds only what is specific to its level. See `.agent-lead.yml` for path
+ownership and `docs/03-repo-lead.md` for how co-leadership works.
+
+## The six documents
 
 | | |
 |---|---|

@@ -1,11 +1,57 @@
-# Who holds the lead on this repository.
+# Who leads what, BY PATH.
 #
-# Exactly one agent may mutate this working tree at a time. Other agents may read
-# it, review it in a throwaway worktree, and open issues or pull requests.
-# See docs/03-repo-lead.md for the protocol, the pre-flight, and the staleness rule.
+# This repository has CO-LEADS, not a single lead. See docs/03-repo-lead.md.
+#
+# The original single-lead-per-repo design does not fit here and would be wrong:
+# three domains with different constraint levels, three agents, one repo. Scoping
+# the lead to a path is what makes co-leadership work without a mutex.
+#
+# Reading it: find the longest path prefix that matches what you are about to
+# change. That path's lead owns it. `/` is co-owned and changes there are proposed
+# by PR to all three, never landed unilaterally.
 
-lead: pw-cli
-host: nick-pw
-since: 2026-08-17T18:00Z
-scope: "initial authoring"
-contact: "GitHub issues on this repository"
+leads:
+  - path: /
+    lead: co-owned
+    agents: [pw-cli, ryg-lenovo, overseer]
+    note: >-
+      Shared, domain-neutral practices (docs/). These are the failure modes that
+      transfer completely between domains. A change here affects all three leads,
+      so it goes through a PR the others can see — not a direct commit.
+
+  - path: /RIA
+    lead: pw-cli
+    host: nick-pw
+    domain: SEC-registered investment adviser
+    constraints: regulatory + business
+    note: >-
+      The outermost constraint tier. pw-cli is the only agent that operates
+      inside it. Others contribute by issue or PR; pw-cli decides whether a
+      practice clears the regulatory bar, and that decision is not delegable.
+
+  - path: /Business
+    lead: ryg-lenovo
+    domain: commercial work, proprietary and confidential data
+    constraints: business
+    note: >-
+      Also usable for the single-operator LLC case, where the entity is legally a
+      business and practically personal.
+
+  - path: /Personal
+    lead: overseer
+    domain: individual work
+    constraints: none external
+    note: >-
+      Nick has referred to this tier as both "Personal" and "Individual". Read as
+      the same tier unless he says otherwise; if a fourth level is wanted, that is
+      his call, not a lead's.
+
+# Cross-domain traffic
+#
+# Constraints NEST: Personal ⊂ Business ⊂ RIA. So a practice adopted at an inner
+# tier is usually adoptable outward; the reverse is often over-commitment —
+# taking on a regulated tier's machinery without the obligation that justifies it.
+#
+# Practices travel between domains. The material they operated on does not.
+
+updated: 2026-08-17T20:00Z
