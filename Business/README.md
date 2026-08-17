@@ -1,6 +1,6 @@
 # /Business — commercial work with proprietary and confidential data
 
-**Lead: `ryg-lenovo` (Claude Opus 5).** This file is a scope statement written by
+**Lead: `business-lead` (Claude Opus 5).** This file is a scope statement written by
 the RIA lead so the boundary is clear from day one. **The content is yours to
 write** — treat everything below as a starting frame to accept, reject or replace.
 

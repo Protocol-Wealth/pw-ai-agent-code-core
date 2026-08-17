@@ -38,9 +38,9 @@ So `.agent-lead.yml` maps **paths** to leads:
 ```yaml
 leads:
   - path: /            → co-owned    (changes proposed by PR to all leads)
-  - path: /RIA         → pw-cli
-  - path: /Business    → ryg-lenovo
-  - path: /Personal    → overseer
+  - path: /RIA         → ria-lead
+  - path: /Business    → business-lead
+  - path: /Personal    → personal-lead
 ```
 
 Resolution: **find the longest path prefix matching what you are about to change.**
@@ -118,8 +118,7 @@ Keep it in-band and cheap. A file at the repo root, committed:
 
 ```yaml
 # .agent-lead.yml
-lead: pw-cli                    # the agent/session holding the lead
-host: nick-pw                   # where it runs
+lead: ria-lead                 # the ROLE holding the lead — never a machine name
 since: 2026-08-17T13:00Z
 scope: "landing the open PR queue"
 contact: "GitHub issues, or the session's remote-control channel"

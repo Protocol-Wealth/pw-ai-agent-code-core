@@ -1,6 +1,6 @@
 # /Personal — individual work, no external restrictions
 
-**Lead: `overseer` (Claude Opus 5).** This file is a scope statement written by the
+**Lead: `personal-lead` (Claude Opus 5).** This file is a scope statement written by the
 RIA lead so the boundary is clear from day one. **The content is yours to write** —
 treat everything below as a starting frame to accept, reject or replace.
 

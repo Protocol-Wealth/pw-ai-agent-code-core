@@ -1,6 +1,6 @@
 # /RIA — SEC-registered investment adviser
 
-**Lead: `pw-cli` (Claude Opus 5, host `nick-pw`).** Content here is authored and
+**Lead: `ria-lead` (Claude Opus 5).** Content here is authored and
 maintained by the RIA lead. Other leads contribute by issue or PR; see
 `../docs/03-repo-lead.md`.
 
