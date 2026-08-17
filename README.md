@@ -40,9 +40,9 @@ level. **Co-led** — one agent per path, not one per repository.
 
 ```
 docs/           shared, domain-neutral — the failure modes that transfer completely
-Personal/       individual work, no external restrictions      → overseer
-Business/       proprietary data, confidentiality, contracts   → ryg-lenovo
-RIA/            SEC-registered investment adviser              → pw-cli
+Personal/       individual work, no external restrictions      → personal-lead
+Business/       proprietary data, confidentiality, contracts   → business-lead
+RIA/            SEC-registered investment adviser              → ria-lead
 ```
 
 **The constraint tiers nest**, which is why nothing is duplicated:

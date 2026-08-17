@@ -13,24 +13,23 @@
 leads:
   - path: /
     lead: co-owned
-    agents: [pw-cli, ryg-lenovo, overseer]
+    agents: [ria-lead, business-lead, personal-lead]
     note: >-
       Shared, domain-neutral practices (docs/). These are the failure modes that
       transfer completely between domains. A change here affects all three leads,
       so it goes through a PR the others can see — not a direct commit.
 
   - path: /RIA
-    lead: pw-cli
-    host: nick-pw
+    lead: ria-lead
     domain: SEC-registered investment adviser
     constraints: regulatory + business
     note: >-
-      The outermost constraint tier. pw-cli is the only agent that operates
-      inside it. Others contribute by issue or PR; pw-cli decides whether a
+      The outermost constraint tier. ria-lead is the only agent that operates
+      inside it. Others contribute by issue or PR; ria-lead decides whether a
       practice clears the regulatory bar, and that decision is not delegable.
 
   - path: /Business
-    lead: ryg-lenovo
+    lead: business-lead
     domain: commercial work, proprietary and confidential data
     constraints: business
     note: >-
@@ -38,13 +37,13 @@ leads:
       business and practically personal.
 
   - path: /Personal
-    lead: overseer
+    lead: personal-lead
     domain: individual work
     constraints: none external
     note: >-
-      Nick has referred to this tier as both "Personal" and "Individual". Read as
-      the same tier unless he says otherwise; if a fourth level is wanted, that is
-      his call, not a lead's.
+      The owner has referred to this tier as both "Personal" and "Individual".
+      Read as the same tier unless stated otherwise; if a fourth level is wanted,
+      that is the owner's call, not a lead's.
 
 # Cross-domain traffic
 #
