@@ -33,6 +33,46 @@ Other agents may:
 Batch work spanning repositories is fine — the constraint is per-repo, not
 per-organisation. One agent per repo, several repos in parallel.
 
+## What this does NOT cover — read this before trusting it
+
+Added after two operators independently attacked the framing. Both were right, and
+the omission mattered more than the protocol.
+
+**This governs working trees. A growing share of shared mutable state is not one.**
+
+Not covered, and not made safe by anything below:
+
+- **Shared databases.** Two agents writing the same Postgres over MCP. One
+  archived a record while the other was reading it; a deployed change altered the
+  second agent's search results *mid-conversation*.
+- **Shared cloud storage** both agents hold credentials for.
+- **systemd units, container state, a branch-protected remote.**
+
+`git worktree list` detects none of that.
+
+**A second class, which single-writer would also not have prevented** — these are
+failures of *state nobody can see*, not of concurrent writes:
+
+- **A commit on no remote at all** — a single copy, on one disk, on a host that has
+  lost power before. `git status` reports clean, because it cannot see
+  committed-but-unpushed. Found only by sweeping:
+  ```bash
+  git rev-list --count <branch> --not --remotes    # >0 ⇒ exists nowhere else
+  ```
+- **Merged but not deployed.** Two PRs merged at 15:05Z and 15:17Z while the
+  running container had been built at 14:23Z. The filter everyone believed was live
+  had never executed. Compare the running artifact against the merge you believe is
+  live.
+- **A stale build artifact outliving its source.** A gitignored `dist/` still
+  exported a function deleted from `src/`, so a test importing the package read
+  `dist` and passed against code that was gone.
+
+So: **the class this protocol prevents is two agents writing the same tree.** For
+shared services the right answer is probably attribution and reconciliation rather
+than exclusion — but do not read this document as "coordination is solved". Saying
+otherwise would make it exactly the thing this repo is about: a check that cannot
+fail, reporting success.
+
 ## Declaring the lead
 
 Keep it in-band and cheap. A file at the repo root, committed:
@@ -52,10 +92,48 @@ you do not mutate — you open an issue or message the lead.
 Handing over is an edit to that file and nothing else, which keeps the record in
 git where the rest of the coordination state already lives.
 
-**Staleness needs a rule, or the file becomes a lock nobody can release.** A
-sensible one: if `since` is older than your agreed session length and the lead's
-branches show no commits in that window, the lead is stale and may be claimed —
-by editing the file, not by assuming.
+### It is documentation, not a lock — and the distinction is load-bearing
+
+Claiming the lead means committing and pushing a file **in the repo whose
+mutations it governs**. Two simultaneous claims produce a merge conflict in the
+lock file itself. Worse in practice: on a branch-protected `main`, committing it
+requires a branch, a PR and a merge — so claiming the lead becomes a multi-minute
+operation, slowest exactly when it is most needed.
+
+**So call it what it is.** Commit it once, up front, change it rarely, and treat it
+as a *declaration of intent* that a human or agent reads — not as a mutex. A thing
+called a lock gets trusted like one, and this cannot bear that weight.
+
+### Expiry must require a positive act, not elapsed time
+
+An earlier draft of this document said: if `since` is older than your session
+length, the lead is stale and may be claimed.
+
+**That is the alerting `for:` trap, and this estate has already paid for it.** A
+`CoordExporterDown` alert with `for: 1800s` sat pending through a 27-minute outage
+and notified nobody. A duration guard tuned to avoid false positives silently stops
+covering the real event.
+
+Same shape here. Too long and the lock outlives a dead agent. Too short and a
+legitimately slow lead is pre-empted **mid-write** — worse than no lock, because
+now two agents both believe they hold it.
+
+If you want expiry, make it a **heartbeat the lead rewrites**, so absence of
+evidence is never read as evidence of absence. If you are not willing to maintain a
+heartbeat, prefer an explicit handover and accept that a dead agent's claim needs a
+human to clear.
+
+### Fetch before you read it
+
+The pre-flight is `git fetch && cat .agent-lead.yml`, **not** `cat`. A stale local
+checkout shows a stale lead, confidently.
+
+This matters more than it looks on multi-host estates: some dispatch mechanisms
+deliver only at the recipient's next session start, so a lead claim made while
+another agent is running may not reach it for hours. The committed file helps only
+if something makes the other agent fetch and read it — and nothing does
+automatically. A live message channel is the only thing that arrives mid-session,
+and a committed file is not one.
 
 ## Pre-flight, before any mutation
 
@@ -74,7 +152,12 @@ work.
 ## Rules that survive contact
 
 - **Stage by explicit path. Never `git add -A` or `git add .`** in a tree another
-  agent could touch. This one rule prevents the most damaging incident class.
+  agent could touch. This one rule prevents the most damaging incident class, and
+  it is mechanically enforceable — a pre-tool guard rejecting the pattern works.
+
+  **Watch the form that feels safe and is not: `git add -A <paths>`.** Appending
+  paths reads like scoping, and `-A` still governs. A guard caught exactly this,
+  from an agent that had just written the rule down.
 - **A "read-only" operation that runs `git checkout`, `git pull`, `git switch`,
   `git stash`, `git clean` or `git reset` is a mutation.** To inspect history
   without touching the tree:

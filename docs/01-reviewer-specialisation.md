@@ -50,9 +50,68 @@ rankings get repeated until they are treated as fact.
 
 **What is NOT measured, and should not be asserted:**
 
-- Whether Grok is better than Codex, or Gemini than either, **at anything**. We
-  have not run a controlled comparison. Stating a ranking without one is precisely
-  the unverified-claim failure the rest of this repo is about.
+- Whether Grok is better than Codex, or Gemini than either, **at anything**.
+  See the two-lane data below: it is a *disjointness* result, not a ranking, and
+  it does not support one.
+
+## Measured: two lanes over identical diffs, seven rounds
+
+Contributed by another operator running `codex` and `grok` over the **same diff**
+from a detached worktree, with every finding adjudicated against the code by hand
+rather than counted:
+
+| round | subject | codex | grok | adjudication |
+|---|---|---|---|---|
+| 1 | supersession | 2 | 0 *(clean verdict)* | both codex findings real |
+| 2 | supersession | 1 | 0 *(clean verdict)* | codex **refuted** — misattributed a line to the wrong function |
+| 1 | pricing | 0 *(clean verdict)* | 2 | both grok findings real |
+| 2 | pricing | 1 | 0 *(clean verdict)* | codex real — a *second* copy of a rate table the author had missed |
+| 3 | pricing | 0 | 0 | converged |
+| 1 | contributor | 4 | 1 | all 5 real; both lanes independently found the same read-side defect |
+| 2 | contributor | 3 | 2 | all 5 real |
+| 3 | contributor | 2 | 0 *(clean verdict)* | both real |
+
+**Totals: codex 13 findings / 12 real / 1 refuted. Grok 5 findings / 5 real / 0 refuted.**
+
+### Read this correctly — it is not a ranking
+
+It is tempting to read "12 real vs 5 real" as codex winning. That is the wrong
+conclusion and the data says so:
+
+- **On the pricing branch, grok found two real defects while codex declared the
+  diff clean.** On supersession round 1, the reverse.
+- Codex emits more findings and issues a clean verdict less readily; grok emits
+  fewer and refused nothing. Those are different operating points, not different
+  skill levels.
+
+**The finding is disjointness.** Across seven rounds the two lanes' findings
+overlapped **exactly once**. A separate PR in the same estate produced fully
+disjoint findings. On this evidence, **single-lane review would have shipped
+roughly half of these defects** — and which half depends on which lane you picked,
+not on which is better.
+
+That is the actual argument for a second reviewer, and it is much stronger than
+"two opinions are better than one".
+
+### Verdict lines are not summaries
+
+Both lanes produced misleading top-line verdicts. Codex opened one review with
+*"internally consistent … without introducing a behavioral regression"* — and grok
+then found two real defects in that same diff.
+
+**Never gate on a reviewer's summary sentence.** Read the findings. A confident
+clean verdict is the single most expensive thing a reviewer can be wrong about,
+because it is the one nobody checks.
+
+### What a proper comparison would still need
+
+The table above is one operator, one harness, three branches. It is enough to
+establish disjointness; it is not enough to rank. That needs the replay method
+below, and one refinement contributed alongside the data: **score unique finds by
+CATEGORY, not only by count.** The asymmetry lives in the categories — one
+reviewer's unique finds were scope errors in evidence, a class self-review is
+structurally bad at because the reviewer shares the author's framing of what the
+population is.
 
 ## How to actually find out, rather than guess
 

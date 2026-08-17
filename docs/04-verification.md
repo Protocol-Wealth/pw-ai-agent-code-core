@@ -69,6 +69,23 @@ started *during* a request and continuing after the response
 was asking the right question.** When a negative result matters, have someone
 adversarially attack the *query*, not just the plumbing.
 
+### The same lesson from the other direction: check precision, not just non-emptiness
+
+Contributed independently, and it sharpens the rule. A keyword scan over a
+2,729-row corpus, looking for mis-titled items, returned **5 rows**. Four were
+false positives — a legitimate article *about* bot-detection frameworks, and three
+astronomy pieces matching on the word "Forbidden". **Precision: 20%.**
+
+A positive control would have passed cleanly. The instrument was live and returning
+rows; the question was wrong.
+
+> **A positive control proves the instrument is live. It never proves the question
+> is right.**
+
+So a positive control needs a complement: **adjudicate a sample of what the scan
+returned.** Non-emptiness is not evidence of correctness in either direction — an
+empty result can mean the query is wrong, and a non-empty result can be 80% noise.
+
 ## 3. Mocks agree with the bug
 
 A unit test whose fixture was written from the same assumption as the code proves
@@ -79,6 +96,33 @@ artifact that defines it**, not against a hand-written double.
 Corollary: **test the failing path, not only the missing path.** A control matrix
 covering "tool absent" and "tool succeeds" is not a control for "tool present and
 reports failure" — which is exactly where the cleanup code lives.
+
+## 3b. Mutation-test the TESTS, not only the code
+
+If the organising claim is "a check that cannot fail, reporting success", then the
+checks most worth attacking are the tests themselves.
+
+Three assertions written in one small file, by an author *specifically trying to
+prevent this*, could not fail:
+
+- A test asserting a rate was correct **passed with the pre-fix code fully
+  restored** — it happened to run inside the date window the bug was scheduled to
+  escape.
+- Its purity check, `fn.length === 1`, was defeated by giving the parameter a
+  **default value** — defaults do not count toward `Function.length`.
+- A test named *"takes the maxima INDEPENDENTLY"* **never called the function under
+  test**; it asserted `Math.max` over a local literal.
+- A "no date-dependence" test that only ever ran at the current date.
+
+Two were caught by review, one only by mutation.
+
+**The rule: before trusting a new test, break the thing it covers and confirm it
+goes red.** If the covered behaviour is time-dependent, *move the clock* rather
+than trusting today's reading. In one session ~12 such mutations were run, and
+every one that failed to go red was a real gap.
+
+Tools that automate this — `mutmut`, `cargo-mutants`, Stryker — are the mechanised
+form of the same discipline.
 
 ## 4. Verify a claim against the source that governs it
 
