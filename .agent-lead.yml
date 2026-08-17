@@ -1,0 +1,11 @@
+# Who holds the lead on this repository.
+#
+# Exactly one agent may mutate this working tree at a time. Other agents may read
+# it, review it in a throwaway worktree, and open issues or pull requests.
+# See docs/03-repo-lead.md for the protocol, the pre-flight, and the staleness rule.
+
+lead: pw-cli
+host: nick-pw
+since: 2026-08-17T18:00Z
+scope: "initial authoring"
+contact: "GitHub issues on this repository"
