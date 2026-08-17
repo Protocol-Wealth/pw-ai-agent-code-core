@@ -38,9 +38,9 @@ So `.agent-lead.yml` maps **paths** to leads:
 ```yaml
 leads:
   - path: /            → co-owned    (changes proposed by PR to all leads)
-  - path: /RIA         → pw-cli
-  - path: /Business    → ryg-lenovo
-  - path: /Personal    → overseer
+  - path: /RIA         → ria-lead
+  - path: /Business    → business-lead
+  - path: /Personal    → personal-lead
 ```
 
 Resolution: **find the longest path prefix matching what you are about to change.**
@@ -116,10 +116,24 @@ fail, reporting success.
 
 Keep it in-band and cheap. A file at the repo root, committed:
 
+**Name the ROLE, never the machine.** This template carried a `host:` field until
+2026-08-17, and the repo shipped naming three internal hosts in its structure table
+before anyone noticed. A host nickname is low-consequence read alone and composes
+badly: with an org name and a domain beside it, it stops being anonymous, and a
+public repo is forked and indexed, so it is permanent in a way a private one never
+is. A role name carries the same meaning — which lead owns this path — with none of
+the surface, and it stays correct when the work moves to a different machine.
+
+Two things that cost a round each when this was cleaned up:
+
+- **Sweep case-insensitively.** A case-sensitive replace missed a case *variant* of
+  the same identifier.
+- **Fix the class, not the citation.** Review named one line; the identifier was in
+  five places, including source comments. A comment is as committed as code.
+
 ```yaml
 # .agent-lead.yml
-lead: pw-cli                    # the agent/session holding the lead
-host: nick-pw                   # where it runs
+lead: ria-lead                  # the ROLE holding the lead, never a machine name
 since: 2026-08-17T13:00Z
 scope: "landing the open PR queue"
 contact: "GitHub issues, or the session's remote-control channel"

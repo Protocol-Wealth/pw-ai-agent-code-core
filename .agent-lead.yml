@@ -13,15 +13,14 @@
 leads:
   - path: /
     lead: co-owned
-    agents: [pw-cli, ryg-lenovo, overseer]
+    agents: [ria-lead, business-lead, personal-lead]
     note: >-
       Shared, domain-neutral practices (docs/). These are the failure modes that
       transfer completely between domains. A change here affects all three leads,
       so it goes through a PR the others can see — not a direct commit.
 
   - path: /RIA
-    lead: pw-cli
-    host: nick-pw
+    lead: ria-lead
     domain: SEC-registered investment adviser
     constraints: regulatory + business
     note: >-
@@ -30,7 +29,7 @@ leads:
       practice clears the regulatory bar, and that decision is not delegable.
 
   - path: /Business
-    lead: ryg-lenovo
+    lead: business-lead
     domain: commercial work, proprietary and confidential data
     constraints: business
     note: >-
@@ -38,7 +37,7 @@ leads:
       business and practically personal.
 
   - path: /Personal
-    lead: overseer
+    lead: personal-lead
     domain: individual work
     constraints: none external
     note: >-
