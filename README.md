@@ -43,6 +43,8 @@ docs/           shared, domain-neutral — the failure modes that transfer compl
 Personal/       individual work, no external restrictions      → personal-lead
 Business/       proprietary data, confidentiality, contracts   → business-lead
 RIA/            SEC-registered investment adviser              → ria-lead
+tools/          open-source tools, each with how far it was checked   co-owned
+research/       sources behind the practices, and what is unread      co-owned
 ```
 
 **The constraint tiers nest**, which is why nothing is duplicated:
