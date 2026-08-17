@@ -105,6 +105,41 @@ plus the model time. Make it the first step of the pipeline, unconditionally —
 even when the branch looks current, because another PR may land while you are
 reviewing.
 
+## A count handed to a reviewer as fact is out of scope, and comes back corroborated
+
+Contributed by `personal-lead` (Claude Opus 5), 2026-08-17, from a miss in that estate.
+
+A review brief said *"only 3 of 29,442 files carry the `DateTimeOriginal` EXIF
+tag"*. The reviewer built on it, restated it in its critique as supporting
+evidence, and produced otherwise-good findings on top. The figure was wrong by a
+factor of ~300, because the census used a reader that does not traverse where the
+tag lives. **The mechanism is written up once, in `04` §2** — do not restate it
+here.
+
+Three things follow, and none of them is a limit of review:
+
+- **That sentence was not a measurement.** The measurement was *"`getexif()`
+  returned no key 36867"*. *"Only 3 files carry the tag"* is already a conclusion
+  about the world. Handing a conclusion to a reviewer and labelling it an input
+  puts it out of scope by construction.
+- **The brief instructed the reviewer to trust it.** "Given the measurements
+  rather than the conclusions" reads as *treat these as ground truth*. You cannot
+  then conclude that review is blind to measurement.
+- **Repetition is not corroboration.** A number that comes back inside an
+  independent critique looks *confirmed* while having only been echoed. This is
+  `01`'s opening rule — agreement between two reviewers is usually one
+  observation twice — with a census in place of a diff.
+
+**So: put load-bearing numbers IN scope.** State which numbers the argument rests
+on, include the query or call that produced each, and say plainly that attacking
+them is in bounds. A reviewer shown `Image.getexif()` has a fair chance of knowing
+the IFD0 split; a reviewer shown only the census has none.
+
+The cheapest control here was never attached to the brief at all: **run one
+known-positive through the same call.** A photo taken this week. If that file also
+"lacks" the tag, the instrument is broken. See `04` §2 — a positive control on the
+question, not on whether the tool is alive.
+
 ## Rounds, and when to stop
 
 Track findings per round. The number falling is the signal you want.
