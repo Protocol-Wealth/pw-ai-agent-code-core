@@ -137,9 +137,20 @@ gh run list -R "$r" --workflow=ai-review.yml --limit 20 \
         |"\(.createdAt[0:10]) \(.conclusion) \(.headBranch)"'
 ```
 
-**Dependabot generated almost every run** — 33 of 34 in one repository, 32 of 33,
-16 of 17, 5 of 6 — and the workflow skips bot pull requests deliberately, for a
-documented reason. So `7.4%` was the ratio of dependency bumps to real work in
+**Dependabot generated almost every run**, which is the whole explanation:
+
+```bash
+gh run list -R "$r" --workflow=ai-review.yml --limit 100 --json headBranch \
+  --jq 'length as $total
+        | ([.[].headBranch|select(startswith("dependabot/"))]|length) as $bots
+        | "\($bots) of \($total)"'
+```
+
+```
+33 of 34    32 of 33    16 of 17    5 of 6
+```
+
+The workflow skips bot pull requests deliberately, for a documented reason. So `7.4%` was the ratio of dependency bumps to real work in
 the run log: **a fact about the traffic, not about the control.** The control was
 doing its job.
 
