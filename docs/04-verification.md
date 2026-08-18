@@ -247,6 +247,16 @@ $ gh api repos/OWNER/REPO/rulesets/20606587 \
 target=branch  include=["~DEFAULT_BRANCH"]  exclude=[]
 ```
 
+`~DEFAULT_BRANCH` is a scope, not a branch name, so one more question is required and a
+reviewer was right to insist on it: that token proves the rule governs the DEFAULT branch,
+which is only `main` if `main` is the default. A repository whose default is `master` or
+`develop` returns exactly the output above while `main` is governed by nothing.
+
+```
+$ gh api repos/OWNER/REPO --jq .default_branch
+main
+```
+
 Only now does `strict=true` say anything about `main`. A verification that reads a rule
 without reading its scope has confirmed that a rule exists somewhere, which is a different
 claim from the one it is being used to support.
