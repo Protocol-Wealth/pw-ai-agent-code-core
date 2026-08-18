@@ -11,6 +11,13 @@ projects.
 **Prove every guard by negative control: break the thing, watch the check fail
 BY NAME, restore, watch it pass.**
 
+> **First, though: a check verifying a control nobody requires is ALSO
+> decoration, however well it fails.** Applied without a stopping rule, this
+> section manufactures guards for guards — we shipped a gate, then a check on the
+> gate, then a check on *that*. Before proving a guard, cite the requirement that
+> mandates the thing it guards. No citation means the candidate action is
+> deletion. See [00 — the gate, and why we deleted it](./00-review-pipeline.md#the-gate-and-why-we-deleted-it).
+
 Four guards written in one night could not have reported the condition they
 existed for:
 
@@ -67,79 +74,94 @@ Two cheap habits:
 - **Check the exit status, not the printed output.** `harness | tail` reports the
   status of `tail`, so a failing suite reads as exit 0. This was hit *in the same
   session that documented it*, while verifying a guard against exactly this class.
+- **A flag computed and never read.** An invariant block set `ok = False` on each
+  failure, printed `FAIL`, never referenced the variable again, and had no
+  `sys.exit`. It exited 0 with any number of failures, so "require invariants
+  green" was a human reading stdout. Same class as the pipe above, reached from
+  the opposite direction: the status was computed correctly and then discarded.
 
-## 1b. A check that never ran is not a check, however well it would have failed
+## 1b. A rate computed over a mixed population measures the population, not the control
 
-Section 1 is about a check whose logic cannot report failure. This is a different
-shape: the check is **correctly implemented**, it *does* fail when it should, and
-it almost never runs.
+**This section exists because its first draft was wrong, was caught by review,
+and was retracted.** The retraction is the finding.
 
-A reusable adversarial-review workflow was consumed by **16 repositories** — on
-paper the most broadly deployed control in the estate. Measured across six
-consumers:
+### The claim that was nearly published here
+
+A reusable adversarial-review workflow was consumed by 16 repositories. Counting
+run outcomes across six consumers:
 
 ```bash
-for r in <consumer repos>; do
+for r in <consumers>; do
   gh run list -R "$r" --workflow=ai-review.yml --limit 100 \
     --json conclusion --jq '[.[].conclusion]|group_by(.)|map("\(.[0])=\(length)")|join(" ")'
 done
 ```
 
 ```
-cancelled  52   54.7%
-skipped    35   36.8%
-success     7    7.4%
-failure     1    1.1%
-TOTAL      95
+cancelled 52 (54.7%)   skipped 35 (36.8%)   success 7 (7.4%)   failure 1
 ```
 
-**It produced a review on roughly one trigger in fourteen.**
+The draft concluded: **"the control produces a review on one trigger in
+fourteen"**, and attributed it to `cancel-in-progress` plus a draft-pull-request
+gate. Both the number and the mechanism were wrong.
 
-Two mechanisms, each individually correct:
+### What the measurement actually showed
 
-- `concurrency: cancel-in-progress: true`, keyed per pull request. Correct
-  design — a superseded review should not be paid for twice. But **an agent
-  pushes many small commits in quick succession**, so under agent-driven
-  development this cancels nearly everything.
-- A job gate, `if: draft == false && ...`. Correct — do not review drafts. But if
-  opening a draft pull request is the house habit, that gate silently disables
-  review for the entire repository.
-
-**Neither is a bug, and that is the point: the failure is emergent.** It is also
-invisible from every angle an operator normally looks from — the workflow file is
-correct, no run is red, no alert fires, and the control reports as deployed
-everywhere.
-
-### Deployment is not coverage
-
-Counting repositories that reference a control measures adoption, not protection.
-
-**Measure the completion rate of every gate you rely on, per repository:**
-`(times it ran to a verdict) / (times it should have)`. A control at 7% is
-closer to absent than to present, and nothing in a normal dashboard says so.
-
-### The correction we nearly published instead
-
-The first pass of this analysis filed the 54.7% cancellation rate as *waste* and
-recommended tuning it down. Re-measured:
+Group the same runs **by branch** and take each branch's *last* run — the
+question is whether the final state of a pull request was reviewed, not how many
+runs it took:
 
 ```bash
-gh run list -R "$r" --workflow=ai-review.yml --limit 40 \
-  --json conclusion,createdAt,updatedAt
+gh run list -R "$r" --workflow=ai-review.yml --limit 100 \
+  --json conclusion,headBranch,createdAt
+# group by headBranch, drop dependabot/*, take each branch's LAST run
 ```
 
-Cancelled runs die at a **median of 1 second** (max 8s; 21 runs totalling 0.7
-minutes). That is the concurrency design working exactly as intended, at
-negligible cost. A completed review takes 35s.
+```
+dependabot runs excluded: 33, 32, 16, 5   (per repo)
+non-dependabot branches ending on success: 100% in all four repos
+```
 
-The defect was never cost — it was that the review does not happen. **Optimising
-a working feature you have misfiled as a defect is a real cost with no
-corresponding benefit**, and it is the same family as hardening a control nobody
-requires.
+**Dependabot consumed 33 of 34 runs, 32 of 33, 16 of 17, 5 of 6.** The workflow
+excludes bot pull requests deliberately. So `7.4%` was measuring *the ratio of
+dependency bumps to real work in the run log* — a fact about the population, not
+about the control. Every real pull request was reviewed.
 
-**Not checked:** whether the other ten consumer repositories show the same
-distribution, and whether the `skipped` runs trace specifically to draft pull
-requests rather than to another branch of that condition.
+### The three errors, which are the transferable part
+
+1. **A rate over a population you have not decomposed is not a measurement.**
+   The denominator silently contained two different kinds of thing. Before
+   believing any rate, ask what is *in* the denominator and split it.
+2. **The mechanism was invented, not measured.** The skips were attributed to a
+   draft-PR gate. There were **zero** draft pull requests across 80. The
+   condition had several branches and the one that fit the story was chosen
+   without checking which actually fired. *Reading a condition is not measuring
+   which branch of it fires.*
+3. **Cancellation was counted as lost coverage.** A superseded run being
+   cancelled does not prevent the final commit from being reviewed. Cheap
+   cancellation and poor coverage are independent claims and need separate
+   evidence.
+
+### The check that would have caught it immediately
+
+**Measure the outcome on the unit you actually care about.** The unit here is a
+pull request reaching its final state, not a workflow run. Runs are what the API
+returns easily; branches are what the question is about. Whenever a convenient
+denominator is not the unit of interest, that gap is where this error lives.
+
+**How it was caught:** three independent CLI reviewers were given the draft and
+the source documents. Two returned REJECT; both independently said the
+conclusion counts could not establish the causal story, and one named the
+internal contradiction — the same rate cannot be "the design working correctly"
+and "evidence the control is absent". That sent the author back to measure the
+mechanism, and the measurement killed the finding. **A single reviewer, or a
+reviewer handed the conclusion instead of the command, would have let it
+through.**
+
+**Not checked:** the other ten consumer repositories, and whether coverage holds
+outside the 100-run window. Non-dependabot branches are sparse — one per repo in
+that window — so "100% coverage" is weakly supported. What *is* strongly
+supported is that 7.4% never measured coverage at all.
 
 ## 2. A scan that searched nothing looks like a scan that found nothing
 
@@ -190,36 +212,18 @@ started *during* a request and continuing after the response
 was asking the right question.** When a negative result matters, have someone
 adversarially attack the *query*, not just the plumbing.
 
-### And the third variant: a control run against the wrong subject
-
-The query was right, the plumbing was right, and the control was run on a tree
-the filter would never see.
-
-An exclusion filter kept a small set of sensitive files out of a 123 GB upload.
-It was verified with a proper positive control — unfiltered, the excluded files
-were listed; filtered, they were gone — and recorded as verified.
-
-The filter matched paths of the form `SORTED BY YEAR/<date>/**`. But the upload
-does not run against the source tree; it runs against a **staged** tree built by
-an earlier step, whose paths begin `2011/`, `_PEOPLE/`, `_UNDATED/`. **The rule
-could never match anything it would actually be shown.** The control had been run
-against the source tree — it verified a deployment that will never execute.
-
-The exclusion did hold, by accident of a different mechanism: an earlier
-resolver step dropped those rows before the staging manifest was written
-(29,442 − 19 = 29,423 rows). So the *outcome* was safe and the *control* was
-theatre, which is the worst combination — it passes, and it teaches you to trust
-it.
-
-**Run the control against the artifact the check will actually be given**, not
-against the one you were looking at when you wrote it. If a pipeline transforms
-paths at any stage, a path-based control is only meaningful downstream of that
-transform.
-
-Found the same day, in the same pipeline: an invariant block that computed
-`ok = False` on failure and **never read the variable again**, with no
-`sys.exit`. It printed `FAIL` and exited 0. "Require invariants green" was a
-human reading stdout — see §1.
+The same subsection covers a variant worth naming, because the control looks even
+more convincing: **right question, right plumbing, wrong subject.** An exclusion
+filter kept sensitive files out of a large upload and was verified properly —
+unfiltered they appeared, filtered they were gone. But the filter matched
+*source* paths, while the upload runs against a **staged** tree whose paths an
+earlier step rewrites. The rule could never match anything it would be shown; the
+control had been run against the source tree, verifying a deployment that would
+never execute. The exclusion held anyway, through an unrelated upstream step — so
+the outcome was safe and the control was theatre, which is the combination that
+teaches misplaced confidence. **Run the control against the artifact the check
+will actually be given**; if a pipeline rewrites paths, a path-based control is
+only meaningful downstream of that rewrite.
 
 ### The same lesson from the other direction: check precision, not just non-emptiness
 

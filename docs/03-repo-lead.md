@@ -86,41 +86,44 @@ Not covered, and not made safe by anything below:
   second agent's search results *mid-conversation*.
 - **Shared cloud storage** both agents hold credentials for.
 - **systemd units, container state, a branch-protected remote.**
-- **Your own scheduled automation writing into a tree an agent owns.** It is not
-  an agent, it holds no lead, it never reads `.agent-lead.yml`, and no
-  coordination mechanism in this document can see it. Details below.
+- **Scheduled automation writing into a tree an agent owns.** It is not an agent,
+  holds no lead, never reads `.agent-lead.yml`, and no mechanism in this document
+  can see it. Details below.
 
 `git worktree list` detects none of that.
 
-### A timer is not an agent, and it will win the race
+### A scheduled writer is a second writer, and the lead protocol cannot see it
 
-The lead protocol assumes the writers are agents that can be told about each
-other. A commit-on-an-interval timer is neither, and ours took a live session's
+The protocol assumes the writers are agents that can be told about each other. A
+commit-on-an-interval timer is not one, and on one occasion ours took a session's
 work:
 
 ```bash
-systemctl --user cat <unit>.timer          # OnUnitActiveSec=15min
-git log --format='%an  %s' -- <path>       # human identity, generic message
+systemctl --user cat <unit>.timer      # OnUnitActiveSec=15min
+git log --format='%an  %s' -- <path>
 ```
 
-A session edited a file, then took longer than the interval to compose its
-commit. The timer committed first — attributing the change to **the human's git
-identity** and replacing the reasoning with `sync: N changed file(s)`. The
-session's own commit then found nothing to commit, and the explanation of *why*
-the change was made was never written anywhere.
+A session edited a file and took longer than the interval to compose its commit.
+The timer committed first, attributing the change to **the human's git identity**
+and replacing the reasoning with a generic `sync: N changed file(s)`. The
+session's own commit then found nothing to commit, and why the change was made
+was never written down. Over four days, 23% of that repository's commits were the
+timer's.
 
-```bash
-git log --since=<date> --oneline | grep -c 'sync: '   # 43 of 188 commits, 23%
-```
+**This is a race, not a certainty** — the timer wins only when the session takes
+longer than the interval to commit, which is common for an agent that edits, then
+reasons, then writes a message. Cheap mitigations: have the automation skip paths
+modified within the last few minutes, or respect a marker the session sets while
+working.
 
-**The sync itself is load-bearing** — it is what makes a session's work survive a
-host that has lost power before, and it should stay. What it must not do is race
-a working session. Either have it skip paths modified within the last few
-minutes, or have it respect a marker the session sets while it is working.
+The sync is worth keeping — it is one of the things that makes a session's work
+survive a host losing power. The point is not that unattended writers are bad; it
+is that **the coordination mechanisms in this document do not apply to them**, so
+if you rely on lead declarations for safety, enumerate the non-agent writers on
+those paths separately.
 
-The general form: **any unattended writer on a path an agent owns is a second
-writer**, and it is more dangerous than a second agent precisely because it never
-argues, never checks, and always wins on a timer.
+**Not checked:** whether other schedulers in the estate (cron, CI bots, sync
+daemons) write into agent-owned paths. That enumeration has not been done.
 
 **A second class, which single-writer would also not have prevented** — these are
 failures of *state nobody can see*, not of concurrent writes:
