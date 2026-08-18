@@ -234,6 +234,22 @@ $ gh api repos/OWNER/REPO/rulesets/20606587 \
 strict=true
 ```
 
+**That is still not enough, and the gap is the same mistake one layer in.** A ruleset
+named `main` is not thereby a ruleset that governs `main`: the name is a label, and the
+scope lives in `target` and `conditions.ref_name`. An active ruleset can target tags, or
+`refs/heads/release/*`, and report `strict=true` while the branch under discussion is
+governed by nothing. Ask for the scope in the same breath as the rule:
+
+```
+$ gh api repos/OWNER/REPO/rulesets/20606587 \
+    -q '"target=\(.target)  include=\(.conditions.ref_name.include)  exclude=\(.conditions.ref_name.exclude)"'
+target=branch  include=["~DEFAULT_BRANCH"]  exclude=[]
+```
+
+Only now does `strict=true` say anything about `main`. A verification that reads a rule
+without reading its scope has confirmed that a rule exists somewhere, which is a
+different claim from the one it is being used to support.
+
 Two consequences, and the second is the one that stings:
 
 1. A change was justified on the grounds that a required strict check made a second CI

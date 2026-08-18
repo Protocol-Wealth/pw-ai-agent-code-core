@@ -190,13 +190,20 @@ previous round's own fixes.
 
 ### Measure the fix-injection rate, not just the finding count
 
-A finding count that stops falling tells you to stop. The **rate at which fixes create
-new defects** tells you what to change.
+A finding count that stops falling tells you *something about the artefact*. The **rate
+at which fixes create new defects** tells you what to change. Neither number tells you
+to stop — see the stop condition below, which is not a count at all.
 
 Measured on one change over ten rounds: nine real defects, of which **five were in code
-written to fix the previous round's finding**. That is roughly 0.55 injected defects
-per fix-round. The loop still terminated — a rate below 1.0 converges — but slowly, and
-every round of it cost a full review cycle.
+written to fix the previous round's finding**. That is roughly 0.55 injected defects per
+fix-round, and that loop did terminate — slowly, and every round of it cost a full review
+cycle.
+
+Treat that as a local measurement, not a convergence proof. A mean below 1.0 does not
+establish termination: injection is uneven across rounds, unresolved findings carry
+forward, and a later round can regress something an earlier one settled — all three
+happened in the same session. The useful reading is comparative (is this change injecting
+more than the last one?), not predictive.
 
 Four levers, in the order they pay:
 
@@ -225,8 +232,12 @@ decision taken deliberately, the review has run out of new information about tha
 artefact — rounds nine and ten produced exactly that. A low count on its own is not a
 stop signal in either direction.
 
-At that point another round is the wrong move. The artefact is too large or too
-wrongly-shaped to re-verify, and the correct responses are:
+When the review runs out of new information, another round is simply waste: stop and
+ship, or stop and hand over.
+
+The PLATEAU is the case that calls for structural work, and it is worth keeping the two
+apart because they arrive looking identical — a round that found little. On a plateau the
+artefact is usually too large or too wrongly-shaped to re-verify, and the responses are:
 
 - **split the PR** — remove everything not required for the guarantee it makes;
 - **question the shape** — in the case above, a shell script had accumulated YAML

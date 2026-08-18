@@ -147,8 +147,8 @@ the same reasons stated below.
 
 ### What a proper comparison would still need
 
-The table above is one operator, one harness, three branches. It is enough to
-establish disjointness; it is not enough to rank. That needs the replay method
+The table above is 27 runs by one operator on one harness across three repositories,
+14 of them paired. It is enough to establish disjointness; it is not enough to rank. That needs the replay method
 below, and one refinement contributed alongside the data: **score unique finds by
 CATEGORY, not only by count.** The asymmetry lives in the categories — one
 reviewer's unique finds were scope errors in evidence, a class self-review is
