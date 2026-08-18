@@ -105,7 +105,9 @@ git log --format='%an  %s' -- <path>
 
 A session edited a file and took longer than the interval to compose its commit.
 The timer committed first, attributing the change to **the human's git identity**
-and replacing the reasoning with a generic `sync: N changed file(s)`. The
+and replacing the reasoning with a generic subject. Two forms occur —
+`chassis: sync N changed file(s)` and `sync: continuity pass, N file(s)` — and
+both are counted below. The
 session's own `git commit` then reported nothing to commit — which is how the
 race was noticed at all — and why the change was made was never written down.
 

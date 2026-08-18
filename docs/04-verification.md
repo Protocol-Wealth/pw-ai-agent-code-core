@@ -143,10 +143,14 @@ gh run list -R "$r" --workflow=ai-review.yml --limit 100 --json headBranch \
 33 of 34    32 of 33    16 of 17    5 of 6
 ```
 
-Bot pull requests, which the workflow declines on purpose, are nearly the entire
-run population in the four repositories checked. **`7.4%` was the ratio of bot
-traffic to everything else — a fact about the traffic mix, not about the
-control.**
+Bot pull requests, which the workflow declines on purpose, are **86 of those 90
+runs — about 95.6%** — in the four repositories checked.
+
+Note the two ratios are different things, and conflating them is its own error:
+`7.4%` is the **success rate** (7 of 95 runs), while `95.6%` is the **bot share**.
+The success rate is low *because* the population is overwhelmingly work the
+control is designed to decline. **`7.4%` was a fact about the traffic mix, not
+about the control.**
 
 That is the whole finding. What the *right* number is would need a different
 measurement again — the unit this question is about is a pull request reaching a
@@ -164,10 +168,11 @@ showed **22 agent-authored commits pushed straight to `main`** in two of those
 repositories:
 
 ```bash
-gh api "repos/$r/commits?since=<install-date>&per_page=100" \
+gh api --paginate "repos/$r/commits?since=<install-date>&per_page=100" \
   --jq '[.[]
-        | select(.commit.message|test("\\(#[0-9]+\\)")|not)   # not a squashed PR
-        | select(.commit.message|test("^Merge ")|not)]        # not a merge commit
+        | select(.commit.author.email=="<the agent identity>")   # author, not just shape
+        | select(.commit.message|test("\\(#[0-9]+\\)")|not)      # not a squashed PR
+        | select(.parents|length==1)]                          # not a merge commit
         | length'
 # 15 and 7 in the two repositories; 0 in the others checked
 ```
@@ -200,9 +205,11 @@ silently failing.**
    without checking which fired. *Reading a condition is not measuring which
    branch of it fires.*
 3. **Cancellation was counted as lost coverage.** A superseded run being
-   cancelled does not stop the final commit being reviewed — those runs held zero
-   jobs and lived 1–2 seconds. Cheap cancellation and poor coverage are
-   independent claims needing separate evidence.
+   cancelled does not stop the final commit being reviewed. Cheap cancellation
+   and poor coverage are independent claims needing separate evidence — and
+   neither query above measures what a cancelled run cost, so the draft's
+   assertion that cancellation was the expensive part had nothing behind it
+   either way.
 
 ### The check that would have caught it immediately
 
