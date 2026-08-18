@@ -105,13 +105,15 @@ git log --format='%an  %s' -- <path>
 
 A session edited a file and took longer than the interval to compose its commit.
 The timer committed first, attributing the change to **the human's git identity**
-and replacing the reasoning with a generic `sync: N changed file(s)`; the
-session's own `git commit` then reported nothing to commit, which is how the race
-was noticed at all. *The commands below show the schedule and the resulting
-commit shape — they do not by themselves prove the ordering; that came from
-observing the session's own commit find an empty index.* The
-session's own commit then found nothing to commit, and why the change was made
-was never written down. Over four days the timer produced 44% of that repository's commits:
+and replacing the reasoning with a generic `sync: N changed file(s)`. The
+session's own `git commit` then reported nothing to commit — which is how the
+race was noticed at all — and why the change was made was never written down.
+
+*The commands below show the schedule and the resulting commit shape. They do
+not by themselves prove the ordering; that came from watching the session's own
+commit find an empty index.*
+
+Over four days the timer produced 44% of that repository's commits:
 
 ```bash
 git log --since=<date> --oneline | wc -l                       # 199
@@ -119,7 +121,7 @@ git log --since=<date> --format='%s' \
   | grep -cE '^chassis: sync|^sync: continuity'                # 87
 ```
 
-*Not checked: how often the race is actually lost — 23% is the timer's share of
+*Not checked: how often the race is actually lost. 44% is the timer's share of
 commits, not the frequency with which it beats a session.*
 
 **This is a race, not a certainty** — the timer wins only when the session takes

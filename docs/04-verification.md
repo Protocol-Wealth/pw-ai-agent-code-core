@@ -158,6 +158,13 @@ from run counts and was wrong.
 non-bot runs correspond one-to-one with human pull requests; and the review
 *quality*, which none of this measures at all.
 
+And one more, found afterwards, which is the same lesson a third time: a later
+pass looked for pull requests and found almost none — then a commit-level query
+showed **22 agent-authored commits pushed straight to `main`** in two of those
+repositories. **Absence of pull requests is not absence of work.** Wherever a
+control is attached to one flow, measure whether the work is using that flow at
+all before concluding the control is idle.
+
 ### A second instrument failure, in the attempt to fix the first
 
 Scoping pull requests to a post-install window returned **0** for every
