@@ -8,12 +8,19 @@ determine whether the pipeline costs minutes or hours.
 ## The pipeline
 
 ```
-branch  →  build  →  local adversarial AI review
+branch  →  build  →  local checks (lint/typecheck/test) on a pre-push hook
+                  →  adversarial AI review, WHEN IT IS WARRANTED
                   →  ADJUDICATE every finding in writing
                   →  post the adjudication (not the raw model output)
-                  →  gate verifies an adjudication exists for this exact commit
                   →  merge
 ```
+
+> **This pipeline used to end in a gate: a required CI check verifying an
+> adjudication existed for the exact commit. We built that, ran it, measured it,
+> and deleted it on 2026-08-18. The section
+> [The gate, and why we deleted it](#the-gate-and-why-we-deleted-it) is now the
+> most useful part of this document, because it is the part where the evidence
+> contradicted us.**
 
 Three properties matter more than the specific tools:
 
@@ -48,62 +55,94 @@ Rejections matter more than acceptances. They are what stops the same false
 finding costing time in round 4, and feeding them back into later rounds measurably
 reduces re-litigation.
 
-## The gate, and its one expensive mistake
+## The gate, and why we deleted it
 
-The gate should verify that an adjudicated review exists **for the exact commit
-being merged**. Bind it to the head sha: without that, a review of an early commit
-keeps vouching for everything pushed after it.
+We ran a required CI check that verified an adjudicated review existed for a
+PR's exact head before it could merge. It is gone. The measurement is the useful
+part, so here it is rather than the design:
 
-The temptation is to also bind the **base** sha — after all, `base...head` is the
-diff that was reviewed, and if the base moves, that diff changed.
+| | |
+|---|---|
+| stored review runs | **366** |
+| rounds on a single PR | **19** (also 16, and 15) |
+| model calls per round | 2 |
+| rounds that changed an outcome | a small minority |
 
-**Binding to the base branch's live tip is a throughput disaster, and it is worth
-understanding why before copying this design.**
+On the one pull request that ran five rounds to exhaustion, **the actual blocker
+was found afterwards by a single structural pass from a different model.** The
+five line-level rounds never found it; each round's findings landed mostly in the
+previous round's fixes.
 
-Every merge to `main` moves the tip. So every merge **invalidates the attestation
-on every other open pull request**, each of which must then be re-reviewed and
-re-attested. With *n* open PRs that is O(n²) review work, and it forces strict
-serialisation: no two PRs can be prepared in parallel, because landing either one
-invalidates the other.
+**Nothing required the gate.** Our governance register has no requirement for
+code review, peer review, change control, segregation of duties or an SDLC. It
+was a firm practice guarding itself — and by the end it had grown a 182-line
+script whose only job was asserting the *shape* of the gate, run by its own
+workflow. Machinery guarding machinery.
 
-Measured on a 12-PR queue this was the single largest cost in the pipeline —
-larger than model time, larger than CI.
+### The failure worth copying is what we did BEFORE deleting it
 
-### What to do instead
+In a single day, one agent built **three separate things to make that ceremony
+cheaper**: a settle step so the gate stopped needing a manual rerun after every
+attestation; a documentation carry-forward so docs-only commits would not
+re-trigger a full review; and a moving tag with its own currency check so a gate
+change stopped costing five pull requests across five repositories.
 
-Bind the attestation to the head sha **and to the merge-base**, not to the base
-branch's moving tip. The merge-base is the commit the reviewed diff was actually
-computed against; it does not change when unrelated work lands.
+Every one of those was locally correct. All three were deleted the same week,
+along with the thing they served.
 
-If you want strictness beyond that, invalidate on base movement **only when the
-base advance touched files the PR's diff also touches**. That is the real
-condition under which "the diff changed" — and it is cheap to compute:
+The doctrine that produced it is in this very repository: *prove every guard by
+negative control; a check that cannot fail is decoration.* Applied recursively,
+with no stopping rule, it **manufactures** guards for guards. Nothing asked the
+zeroth question:
 
-```bash
-git diff --name-only "$OLD_BASE".."$NEW_BASE" > /tmp/base-changed
-git diff --name-only "$MERGE_BASE"...HEAD      > /tmp/pr-changed
-comm -12 <(sort /tmp/base-changed) <(sort /tmp/pr-changed)   # non-empty ⇒ re-review
-```
+> **Is the thing being guarded required?**
 
-Anything else re-reviews a diff that did not change.
+The answer was already filed, in a register of things explicitly NOT required.
+The rule existed in an agent's memory notes; it did not exist in any document
+the agent loaded.
 
-## Update the branch BEFORE reviewing, always
+### The rule that replaces it
 
-Sequence matters, and getting it wrong costs a full cycle:
+Put this at **position 0** of any planning checklist, before the questions about
+scope and data model:
 
-```
-update branch onto base  →  review  →  adjudicate  →  attest  →  merge
-```
+> **If this work builds, hardens, or cheapens a control, gate or ceremony: cite
+> the requirement that mandates the control — verbatim, from the governing
+> source — before writing anything. No citation means the candidate action is
+> DELETION, raised with the owner immediately, not after you have made it
+> cheaper. Optimising an unrequired control is the same defect as guarding a
+> constraint you imposed on yourself.**
 
-**Not** review → attest → discover the branch is behind → update → re-review →
-re-attest. If the attestation is bound to the head sha (it should be), updating the
-branch changes the head and correctly invalidates everything you just did.
+And append this to *a check that cannot fail is decoration*:
 
-This is cheap to get right and annoying to get wrong: the branch update is one API
-call, and doing it first costs nothing. Doing it last costs an entire review round
-plus the model time. Make it the first step of the pipeline, unconditionally —
-even when the branch looks current, because another PR may land while you are
-reviewing.
+> A check verifying a control nobody requires is **also** decoration, however
+> well it fails.
+
+### What review looks like without a gate
+
+Reviewing is still worth doing. It caught a P1 inside a fix for another P1 on
+the same day we deleted the gate. **Stamping that it happened was the waste.**
+
+- substantive code changes: review **once**, not per push
+- **structurally first** when a control, compliance surface or schema is involved
+- **not at all** on documentation, pins, chores or dependency bumps
+- **stop at two rounds** — see [Rounds, and when to stop](#rounds-and-when-to-stop)
+
+Move the mechanical checks to a **pre-push hook** instead. Ours runs lint,
+typecheck and unit tests (or `terraform fmt` plus the verifier self-tests). The
+economics are not subtle: CI and deploy were **85% of our Actions wall-clock**,
+and GitHub bills every job **rounded up to a whole minute** — so a red push is
+never one wasted minute, it is a full job fan-out, and the fix costs another.
+
+### The one review we kept in CI
+
+Dependency-bot pull requests, because they **auto-merge on minor and patch with
+nobody at a keyboard**. That is the line worth drawing:
+
+> **CI reviews what no human initiated. Local reviews what a human did.**
+
+A local-only review requires a human at a terminal. Anything that merges itself
+does not have one.
 
 ## A count handed to a reviewer as fact is out of scope, and comes back corroborated
 
@@ -166,9 +205,16 @@ artefact*:
 
 | Rounds | Action |
 |---|---|
-| 1–4 | Normal: single adversarial reviewer, fix, re-review |
-| **~5** | Stop patching. Get an independent opinion from a **different model**, and ask it the **structural** question — *"what is wrong here that neither of us has articulated?"* — not the local one. Line-level reviewers saturate; they keep finding the next symptom |
-| **~7** | **Splitting becomes the default** and continuing is what needs justification. Also widen the reviewer set: run a second *and* third vendor over the same diff, keeping each one's findings under its own heading |
+| 1–2 | Normal: single adversarial reviewer, fix, re-review |
+| **2** | **If the count has not fallen, STOP.** Get an independent opinion from a **different model**, and ask it the **structural** question — *"what is wrong here that neither of us has articulated?"* — not the local one. Line-level reviewers saturate; they keep finding the next symptom |
+| **3+** | **Splitting is the default** and continuing is what needs justification |
+
+**This ladder used to say 1–4 normal, ~5 structural, ~7 split.** It was revised
+down on 2026-08-18 against the measurement above: rounds 3–5 on the PR that ran
+to exhaustion produced findings *in the previous round's fixes*, not in the
+original work, and the structural pass that actually solved it would have been
+correct at round 2. The old numbers were an estimate; these are what the counting
+showed.
 
 The reason the structural question matters more than another pass: in the measured
 case, eleven rounds of correct individual fixes never lowered the finding rate,

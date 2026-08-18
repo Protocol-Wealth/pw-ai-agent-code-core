@@ -11,6 +11,13 @@ projects.
 **Prove every guard by negative control: break the thing, watch the check fail
 BY NAME, restore, watch it pass.**
 
+> **First, though: a check verifying a control nobody requires is ALSO
+> decoration, however well it fails.** Applied without a stopping rule, this
+> section manufactures guards for guards — we shipped a gate, then a check on the
+> gate, then a check on *that*. Before proving a guard, cite the requirement that
+> mandates the thing it guards. No citation means the candidate action is
+> deletion. See [00 — the gate, and why we deleted it](./00-review-pipeline.md#the-gate-and-why-we-deleted-it).
+
 Four guards written in one night could not have reported the condition they
 existed for:
 
