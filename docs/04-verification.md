@@ -262,11 +262,14 @@ without reading its scope has confirmed that a rule exists somewhere, which is a
 claim from the one it is being used to support.
 
 `includes_parents` and `--paginate` are written out on purpose, and the reason is a small
-lesson in itself. Two consecutive review rounds disagreed about that parameter's default —
-one said `true`, so the listing was already complete; the next said `false`, so it was
-missing inherited rules. The API reference says `true` ("Include rulesets configured at
-higher levels that apply to this repository. Default: `true`"), and the disagreement cannot
-be settled empirically from an account with no organisation above it.
+lesson in itself. Three review rounds took confident, opposite positions on that
+parameter's default — `true` (the listing was already complete), then `false` (it silently
+dropped inherited rules), then `false` again. The reference page, fetched 2026-08-18, says
+"Include rulesets configured at higher levels that apply to this repository. Default:
+`true`" — and none of the participants could settle it empirically from an account with no
+organisation above it. That stalemate, three rounds long, is the strongest argument this
+section makes: a reviewer's memory of an API default is not evidence, and neither is this
+document's.
 
 **So stop depending on the answer.** A verification whose correctness rests on a default
 nobody in the room can demonstrate is one argument away from being wrong, and writing out
