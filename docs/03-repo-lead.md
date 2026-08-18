@@ -86,8 +86,65 @@ Not covered, and not made safe by anything below:
   second agent's search results *mid-conversation*.
 - **Shared cloud storage** both agents hold credentials for.
 - **systemd units, container state, a branch-protected remote.**
+- **Scheduled automation writing into a tree an agent owns.** It is not an agent,
+  holds no lead, never reads `.agent-lead.yml`, and no mechanism in this document
+  can see it. Details below.
 
 `git worktree list` detects none of that.
+
+### A scheduled writer is a second writer, and the lead protocol cannot see it
+
+The protocol assumes the writers are agents that can be told about each other. A
+commit-on-an-interval timer is not one, and on one occasion ours took a session's
+work:
+
+```bash
+systemctl --user cat <unit>.timer      # OnUnitActiveSec=15min
+git log --format='%an  %s' -- <path>
+```
+
+A session edited a file and took longer than the interval to compose its commit.
+The timer committed first, attributing the change to **the human's git identity**
+and replacing the reasoning with a generic subject. The
+session's own `git commit` then reported nothing to commit — which is how the
+race was noticed at all — and why the change was made was never written down.
+
+*The commands below show the schedule and the resulting commit shape. They do
+not by themselves prove the ordering; that came from watching the session's own
+commit find an empty index.*
+
+Over four days the timer produced **24%** of that repository's commits:
+
+```bash
+git log --since=<date> --oneline | wc -l                    # 202
+git log --since=<date> --format='%s' | grep -c '^<timer-subject>'   #  49
+```
+
+**Count only the subject the timer itself writes.** A draft of this section said
+44%, reached by widening the pattern to a second `sync:`-prefixed subject after a
+reviewer asked for a command that matched more than one form. That second subject
+is written by an **on-demand** script, not the timer — 38 commits from a
+different producer, folded into a figure labelled "the timer's". *Widening a
+pattern to satisfy a review finding, without rechecking that the wider set still
+answers the same question, is how a corrected number becomes a worse one.*
+
+*Not checked: how often the race is actually lost. 24% is the timer's share of
+commits, not the frequency with which it beats a session.*
+
+**This is a race, not a certainty** — the timer wins only when the session takes
+longer than the interval to commit, which happened here, and will happen whenever
+composing the message outlasts the interval. Cheap mitigations: have the automation skip paths
+modified within the last few minutes, or respect a marker the session sets while
+working.
+
+The sync is worth keeping — it is one of the things that makes a session's work
+survive a host losing power. The point is not that unattended writers are bad; it
+is that **the coordination mechanisms in this document do not apply to them**, so
+if you rely on lead declarations for safety, enumerate the non-agent writers on
+those paths separately.
+
+**Not checked:** whether other schedulers in the estate (cron, CI bots, sync
+daemons) write into agent-owned paths. That enumeration has not been done.
 
 **A second class, which single-writer would also not have prevented** — these are
 failures of *state nobody can see*, not of concurrent writes:

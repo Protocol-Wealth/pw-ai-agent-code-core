@@ -74,6 +74,164 @@ Two cheap habits:
 - **Check the exit status, not the printed output.** `harness | tail` reports the
   status of `tail`, so a failing suite reads as exit 0. This was hit *in the same
   session that documented it*, while verifying a guard against exactly this class.
+- **A flag computed and never read.** An invariant block set `ok = False` on each
+  failure, printed `FAIL`, never referenced the variable again, and had no
+  `sys.exit`. It exited 0 with any number of failures, so "require invariants
+  green" was a human reading stdout. Same class as the pipe above, reached from
+  the opposite direction: the status was computed correctly and then discarded.
+
+## 1b. A rate computed over a mixed population measures the population, not the control
+
+**This section exists because its first draft was wrong, was caught by review,
+and was retracted.** The retraction is the finding.
+
+### The claim that was nearly published here
+
+A reusable adversarial-review workflow is called by **14 repositories**:
+
+```bash
+gh search code --owner <org1> --owner <org2> \
+  "ci-workflows/.github/workflows/ai-review.yml" --limit 30 \
+  --json repository,path --jq '.[]|"\(.repository.nameWithOwner)\t\(.path)"' | sort -u
+# 16 hits, 2 of which are inside the workflow repo itself -> 14 callers
+```
+
+Counting **run outcomes** across six of those callers:
+
+```bash
+for r in <the six callers>; do
+  gh run list -R "$r" --workflow=ai-review.yml --limit 100 \
+    --json conclusion --jq '[.[].conclusion]|group_by(.)|map("\(.[0])=\(length)")|join(" ")'
+done   # summed across the six by hand
+```
+
+```
+cancelled 52 (54.7%)   skipped 35 (36.8%)   success 7 (7.4%)   failure 1
+```
+
+The draft concluded **"the control produces a review on one trigger in
+fourteen"** and blamed `cancel-in-progress` plus a draft-pull-request gate. The
+number was real; every inference drawn from it was wrong.
+
+### Two measurements of the same thing, and they disagree
+
+**Measurement 1 — count run outcomes.**
+
+```bash
+for r in <the six callers>; do
+  gh run list -R "$r" --workflow=ai-review.yml --limit 100 \
+    --json conclusion --jq '[.[].conclusion]|group_by(.)|map("\(.[0])=\(length)")|join(" ")'
+done   # summed across the six by hand
+```
+
+```
+cancelled 52 (54.7%)   skipped 35 (36.8%)   success 7 (7.4%)   failure 1
+```
+
+Conclusion drawn: the control is broken.
+
+**Measurement 2 — split the population, because the denominator holds two
+different kinds of thing:**
+
+```bash
+gh run list -R "$r" --workflow=ai-review.yml --limit 100 --json headBranch \
+  --jq 'length as $t | ([.[].headBranch|select(startswith("dependabot/"))]|length) as $b
+        | "\($b) of \($t)"'
+```
+
+```
+33 of 34    32 of 33    16 of 17    5 of 6
+```
+
+Bot pull requests, which the workflow declines on purpose, are **86 of those 90
+runs — about 95.6%** — in the four repositories checked.
+
+Note the two ratios are different things, and conflating them is its own error:
+`7.4%` is the **success rate** (7 of 95 runs), while `95.6%` is the **bot share**.
+The success rate is low *because* the population is overwhelmingly work the
+control is designed to decline. **`7.4%` was a fact about the traffic mix, not
+about the control.**
+
+That is the whole finding. What the *right* number is would need a different
+measurement again — the unit this question is about is a pull request reaching a
+verdict, and runs are not pull requests. **This section deliberately stops here
+rather than asserting a coverage rate**, because an earlier draft asserted one
+from run counts and was wrong.
+
+**Not checked, and it matters:** the eight callers not inspected; whether the
+non-bot runs correspond one-to-one with human pull requests; and the review
+*quality*, which none of this measures at all.
+
+And one more, found afterwards, which is the same lesson a third time: a later
+pass looked for pull requests and found almost none — then a commit-level query
+showed **22 agent-authored commits pushed straight to `main`** in two of those
+repositories:
+
+```bash
+gh api --paginate "repos/$r/commits?since=<install-date>&per_page=100" \
+  --jq '[.[]
+        | select(.commit.author.email=="<the agent identity>")   # author, not just shape
+        | select(.commit.message|test("\\(#[0-9]+\\)")|not)      # not a squashed PR
+        | select(.parents|length==1)]                          # not a merge commit
+        | length'
+# 15 and 7 in the two repositories; 0 in the others checked
+```
+ **Absence of pull requests is not absence of work.** Wherever a
+control is attached to one flow, measure whether the work is using that flow at
+all before concluding the control is idle.
+
+### A second instrument failure, in the attempt to fix the first
+
+Scoping pull requests to a post-install window returned **0** for every
+repository. That was not the answer — `gh --jq` does not accept `--arg`, so the
+filter errored and a shell default rendered the error as `0`. A positive control
+caught it: the same query with a date of `2020-01-01` also returned "0", which is
+impossible.
+
+**Run any filter with a value that MUST match before believing a zero.** And note
+what nearly happened: a broken query agreed with the previous conclusion.
+**Agreement with your last result is not confirmation when the new instrument is
+silently failing.**
+
+### The three errors, which are the transferable part
+
+1. **A rate over a population you have not decomposed is not a measurement.** The
+   denominator silently held two different kinds of thing. Before believing any
+   rate, ask what is *in* the denominator and split it.
+2. **The mechanism was invented, not measured.** The skips were blamed on a
+   draft-PR gate. There were **zero** draft pull requests across 80 —
+   `gh pr list -R "$r" --state all --limit 40 --json isDraft --jq '[.[]|select(.isDraft)]|length'`
+   returns 0 on each. The condition had several branches and the one fitting the story was chosen
+   without checking which fired. *Reading a condition is not measuring which
+   branch of it fires.*
+3. **Cancellation was counted as lost coverage.** A superseded run being
+   cancelled does not stop the final commit being reviewed. Cheap cancellation
+   and poor coverage are independent claims needing separate evidence — and
+   neither query above measures what a cancelled run cost, so the draft's
+   assertion that cancellation was the expensive part had nothing behind it
+   either way.
+
+### The check that would have caught it immediately
+
+**Measure the outcome on the unit you actually care about.** The unit is a pull
+request reaching a verdict, not a workflow run. Runs are what the API returns
+easily; branches are what the question is about. **Wherever the convenient
+denominator is not the unit of interest, this error lives.**
+
+**How it was caught:** three independent CLI reviewers were given the draft plus
+the source documents. Two returned REJECT and both said, independently, that
+conclusion counts could not establish the causal story; one named the internal
+contradiction — the same rate cannot be "the design working correctly" and
+"evidence the control is absent". A fourth reviewer, given the raw API access
+rather than the write-up, produced the branch-level decomposition that killed the
+claim outright. **In this instance no single lane found everything**: one named
+the contradiction, another the unsupported mechanism, and the decomposition came
+from the reviewer given raw query access rather than the write-up.
+
+**Not checked:** whether coverage holds outside the 100-run window; whether the
+`skipped` conclusions are all bot traffic in the eight callers not individually
+inspected; and the review *quality* — this measures only that a verdict was
+produced, never whether it was any good.
 
 ## 2. A scan that searched nothing looks like a scan that found nothing
 
@@ -123,6 +281,21 @@ started *during* a request and continuing after the response
 **The control proved the scan was reading the tree. It could not prove the scan
 was asking the right question.** When a negative result matters, have someone
 adversarially attack the *query*, not just the plumbing.
+
+The same subsection covers a variant worth naming, because the control looks even
+more convincing: **right question, right plumbing, wrong subject.** An exclusion
+filter kept sensitive files out of a large upload and was verified properly —
+unfiltered they appeared, filtered they were gone. But the filter matched
+*source* paths, while the upload runs against a **staged** tree whose paths an
+earlier step rewrites. The rule could never match anything it would be shown; the
+control had been run against the source tree, verifying a deployment that would
+never execute. The exclusion held anyway, through an unrelated upstream step — so
+the outcome was safe and the control was theatre, which is the combination that
+teaches misplaced confidence. **Run the control against the artifact the check
+will actually be given**; if a pipeline rewrites paths, a path-based control is
+only meaningful downstream of that rewrite. *Not checked in that incident: how
+many other controls in the same pipeline were verified against the pre-transform
+tree — the audit was stopped after the first one was found.*
 
 ### The same lesson from the other direction: check precision, not just non-emptiness
 
