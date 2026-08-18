@@ -103,6 +103,46 @@ then found two real defects in that same diff.
 clean verdict is the single most expensive thing a reviewer can be wrong about,
 because it is the one nobody checks.
 
+### A second, larger sample — and the reliability axis the first one missed
+
+A later session on the same harness ran **19 two-lane reviews** across three
+repositories (an application, a database-backed service, and shell operations code),
+same prompt, same diffs, lanes running in parallel:
+
+| | lane A | lane B |
+|---|---|---|
+| lanes completed | **18 / 18** | **8 / 12** |
+| findings raised | 24 | 6 |
+| failure modes | none | 3 hard timeouts at the 600s ceiling, 1 turn-budget truncation |
+
+Two things this adds to the seven-round result above.
+
+**Disjointness held at a larger n.** Overlap was 3 across roughly twenty rounds. Each
+lane was again the sole finder of real defects. The clearest single case: on one change,
+lane B raised the P1 that invalidated the author's *entire approach* — a fix that only
+worked when a write happened to land inside a narrow sampling window — while lane A
+found three separate fail-open paths in the same diff and missed the structural flaw.
+Neither lane found the other's. A single-lane gate on **either** model ships a real
+defect that night.
+
+**Completion is a separate axis from finding rate, and it is not visible in a
+findings table.** Lane B failed to finish a third of its runs, and on one particular
+file it failed three times out of four while completing 94–110 KB diffs elsewhere in
+the same session. Wall-clock tracked how much the agent chose to investigate, not diff
+size. Two consequences worth carrying:
+
+- **A timed-out lane is not a passed lane**, and a harness that reports the two the same
+  way turns a one-lane review into a two-lane claim. Report per-lane outcomes in the
+  artefact.
+- Do not tune the timeout down without the distribution. Here the successful runs
+  clustered *just under* the ceiling (roughly 360–590s against a 600s limit), so a
+  lower limit would have converted successes into failures rather than failing fast.
+  A plausible-sounding optimisation, refuted by the data it needed.
+
+**Scope:** one operator, one harness, two model CLIs, a single session. Enough for
+disjointness and for the reliability asymmetry; **not** enough to rank the models, for
+the same reasons stated below.
+
 ### What a proper comparison would still need
 
 The table above is one operator, one harness, three branches. It is enough to

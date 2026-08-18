@@ -188,6 +188,37 @@ Measured on one file: findings went `5, 3, 7, 4, 2, 5, 5, 3, 3, 4, 7` across
 eleven rounds, and a large share of later findings were defects introduced by the
 previous round's own fixes.
 
+### Measure the fix-injection rate, not just the finding count
+
+A finding count that stops falling tells you to stop. The **rate at which fixes create
+new defects** tells you what to change.
+
+Measured on one change over ten rounds: nine real defects, of which **five were in code
+written to fix the previous round's finding**. That is roughly 0.55 injected defects
+per fix-round. The loop still terminated — a rate below 1.0 converges — but slowly, and
+every round of it cost a full review cycle.
+
+Four levers, in the order they pay:
+
+1. **Confirm the finding against the code before editing anything.** Fixing a false
+   positive injects a real defect *and* manufactures another round. In this estate two
+   rounds once asserted confidently that a model identifier was unregistered when it
+   was registered. A sixty-second check is cheaper than the round it prevents.
+2. **Turn a finding into a check before fixing it.** Write the failing assertion, then
+   fix. The assertion survives into later rounds and blocks the fix-on-fix regression
+   directly — which is the defect class being measured. On a repository with no test
+   suite this also builds one out of real defects, at no extra design cost.
+3. **Batch a round's findings into one considered change**, re-derived from intent,
+   rather than N point-patches applied under time pressure.
+4. **Slice the artefact.** A ten-round change is usually an oversized one.
+
+The counter-signal worth respecting: rounds are also where the *good* findings come
+from. In the same session, round eight of one change produced a defect that had
+survived every earlier round, and rounds nine and ten produced only re-litigation of
+decisions already taken deliberately. **Re-litigation, not a low count, is the reliable
+stop signal** — when a round asks you to re-add state you removed on purpose, the
+review has run out of new information about that artefact.
+
 At that point another round is the wrong move. The artefact is too large or too
 wrongly-shaped to re-verify, and the correct responses are:
 

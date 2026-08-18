@@ -212,6 +212,95 @@ past event.
 days and 66% over 7. A one-week read would have rejected a change that was
 justified. State the window with the number.
 
+### The right API, the wrong surface
+
+A verification can query a real, authoritative, correctly-authenticated endpoint and
+still not observe the rule it claims to have checked.
+
+An estate doc recorded that seven repositories were protected, "verified against the
+API" on a stated date. The verification used classic branch protection. The rule that
+actually gates merges lives in a **ruleset**, which is a different endpoint:
+
+```
+$ gh api repos/OWNER/REPO/branches/main/protection -q '.required_status_checks'
+                                    # empty
+
+$ gh api repos/OWNER/REPO/rulesets -q '.[] | "\(.id)\t\(.name)\t\(.enforcement)"'
+20606587        main    active
+
+$ gh api repos/OWNER/REPO/rulesets/20606587 \
+    -q '.rules[] | select(.type=="required_status_checks") | .parameters
+        | "strict=\(.strict_required_status_checks_policy)"'
+strict=true
+```
+
+Two consequences, and the second is the one that stings:
+
+1. A change was justified on the grounds that a required strict check made a second CI
+   run redundant. That justification was **correct**, and the evidence for it was
+   invisible to the documented verification procedure. Right conclusion, unexamined
+   mechanism.
+2. The same endpoint cannot see **bypass actors**. The ruleset above carries three at
+   `bypass_mode: always` — one `DeployKey` entry with `actor_id: null`, meaning *any*
+   deploy key with write access, present or future:
+
+```
+$ gh api repos/OWNER/REPO/rulesets/20606587 \
+    -q '.bypass_actors[]? | "\(.actor_type)\tid=\(.actor_id)\t\(.bypass_mode)"'
+DeployKey       id=null always
+Integration     id=1144995      always
+Integration     id=1236702      always
+```
+
+**Not checked:** whether any deploy key currently holds write on that repository — on
+the one inspected, `gh api repos/OWNER/REPO/keys` returned empty, so the exposure is
+latent rather than live. The two integrations were not identified; resolving an app id
+to a name needs `admin:org`, which the operator's token lacked.
+
+The generalisation: when a protection or policy claim matters, enumerate **every**
+surface that can express it, and re-verify after any platform migrates a feature from
+one to another. "We checked the API" names a method, not a scope.
+
+### A control that passes identically before and after is broken
+
+The negative-control rule above says a control must be shown to fail. The sharper
+version: **run it against the unfixed code too, and require the two runs to differ.**
+
+Three controls in one session passed on both versions, and each would have certified a
+fix that did nothing:
+
+| what was being tested | why the control could not fail |
+|---|---|
+| a reaper that kills orphaned child processes on interrupt | the script re-execs itself from a temp snapshot, so the pid matched by name was the pre-exec wrapper; the real process was never signalled |
+| a guard that flags a run which verified nothing | the chosen input already incremented that counter by another path, so both versions reported the same |
+| a turn-budget truncation guard | the input made the process exit non-zero, so an **older** guard caught it and the new one never ran |
+
+In all three the control was rewritten, not the fix. The tell is cheap and mechanical:
+**if the before and after runs produce the same output, the control is wrong until
+proven otherwise.** Only the third was noticed from the output alone; the other two
+were found by explicitly running the old version.
+
+### A marker the reviewed content can contain
+
+A harness that decides an outcome by searching output for a sentinel breaks in **both**
+directions once the reviewed material can contain that sentinel:
+
+- A fixed refusal token (`DIFF_UNREADABLE`) failed a *good* review, on the very commit
+  that introduced the literal — the diff contained it. Fixed with a per-run nonce
+  generated after the diff is written, so reviewed content cannot contain it.
+- The mirror image, in the same file months later: a completion guard required the
+  string `VERDICT:` to appear. That string occurs in the harness's own prompt and
+  comments, so a truncated review that quoted the file it was reviewing **passed**.
+
+Three successive narrowings were each defeated by a case a stub reproduced in one run:
+substring anywhere → the file contains it; anchored to line start → narration quoting
+the required format sits at column 0; within the last N lines → a three-line truncation
+puts the quote inside any small window. What held was **the last non-empty line**,
+which narration cannot satisfy while still having something after it to say.
+
+Rule: a sentinel must be unforgeable by the material under test — generate it per run —
+and a *required* marker must be positionally constrained, not merely present.
+
 ## 4b. Proportion the evidence to the surface, and report only what you ran
 
 Prior art: `AGENTS.md` in `deepseek-ai/deepseek-harness` (read 2026-08-17). Three
