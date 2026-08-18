@@ -247,8 +247,22 @@ target=branch  include=["~DEFAULT_BRANCH"]  exclude=[]
 ```
 
 Only now does `strict=true` say anything about `main`. A verification that reads a rule
-without reading its scope has confirmed that a rule exists somewhere, which is a
-different claim from the one it is being used to support.
+without reading its scope has confirmed that a rule exists somewhere, which is a different
+claim from the one it is being used to support.
+
+One finding on this section is worth recording because it was **wrong**, and refuting it
+took less time than applying it would have. A reviewer called the listing incomplete
+without `includes_parents=true`, on the grounds that an inherited organisation or
+enterprise ruleset would be omitted. The parameter exists; its default is `true`
+("Include rulesets configured at higher levels that apply to this repository. Default:
+`true`"), so the listing already includes inherited rules and adding the flag changes
+nothing. Checked against the API reference before editing, which is the whole discipline:
+a fix applied to a false premise injects a defect and manufactures another round.
+
+What the finding does point at is real, though it is a different thing: because the listing
+mixes repository rules with inherited ones, the response is the only place that says WHERE
+a rule lives. Read `source_type` (and `source`) per ruleset, or you will look for a rule in
+the repository settings that is defined an organisation above it.
 
 Two consequences, and the second is the one that stings:
 

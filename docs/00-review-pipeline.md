@@ -232,8 +232,16 @@ decision taken deliberately, the review has run out of new information about tha
 artefact — rounds nine and ten produced exactly that. A low count on its own is not a
 stop signal in either direction.
 
-When the review runs out of new information, another round is simply waste: stop and
-ship, or stop and hand over.
+When the review runs out of new information, another round of the SAME review is waste.
+That ends this review; it is not evidence the change is safe.
+
+Keep those two apart, because conflating them is the expensive version. This document
+records reviewers issuing confident clean verdicts while real defects remained — a lane
+reported clean on a commit where the other lane immediately found three — so "clean round"
+means *this reviewer has stopped producing information*, not *this change is correct*. The
+move after a clean round is an INDEPENDENT check: a different model, a test that fails on
+the defect class, or a deterministic check that does not have opinions. Ship on the
+strength of that, never on the strength of a lane going quiet.
 
 The PLATEAU is the case that calls for structural work, and it is worth keeping the two
 apart because they arrive looking identical — a round that found little. On a plateau the
@@ -254,8 +262,14 @@ artefact*:
 | Rounds | Action |
 |---|---|
 | 1–2 | Normal: single adversarial reviewer, fix, re-review |
-| **2** | **If the count has not fallen, STOP.** Get an independent opinion from a **different model**, and ask it the **structural** question — *"what is wrong here that neither of us has articulated?"* — not the local one. Line-level reviewers saturate; they keep finding the next symptom |
+| **2** | **If the count has not fallen, stop THIS LANE — not the review.** Get an independent opinion from a **different model**, and ask it the **structural** question — *"what is wrong here that neither of us has articulated?"* — not the local one. Line-level reviewers saturate; they keep finding the next symptom |
 | **3+** | **Splitting is the default** and continuing is what needs justification |
+
+The wording in that middle row is load-bearing and used to read just "STOP", which
+contradicted the section above it: a plateau means escalate. Two reviewers flagged the
+contradiction, and both readings are damaging in opposite directions — stop early and you
+ship an unexamined plateau, escalate without ending the saturated lane and you pay for
+another round of the next symptom.
 
 **This ladder used to say 1–4 normal, ~5 structural, ~7 split.** It was revised
 down on 2026-08-18 against the measurement above: rounds 3–5 on the PR that ran
