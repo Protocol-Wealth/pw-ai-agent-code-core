@@ -107,11 +107,12 @@ A session edited a file and took longer than the interval to compose its commit.
 The timer committed first, attributing the change to **the human's git identity**
 and replacing the reasoning with a generic `sync: N changed file(s)`. The
 session's own commit then found nothing to commit, and why the change was made
-was never written down. Over four days the timer produced 23% of that repository's commits:
+was never written down. Over four days the timer produced 44% of that repository's commits:
 
 ```bash
-git log --since=<date> --oneline | wc -l                    # 188
-git log --since=<date> --oneline | grep -c '^\w* sync: '     # 43
+git log --since=<date> --oneline | wc -l                       # 199
+git log --since=<date> --format='%s' \
+  | grep -cE '^chassis: sync|^sync: continuity'                # 87
 ```
 
 *Not checked: how often the race is actually lost — 23% is the timer's share of

@@ -99,8 +99,10 @@ gh search code --owner <org1> --owner <org2> \
 Counting **run outcomes** across six of those callers:
 
 ```bash
-gh run list -R "$r" --workflow=ai-review.yml --limit 100 \
-  --json conclusion --jq '[.[].conclusion]|group_by(.)|map("\(.[0])=\(length)")|join(" ")'
+for r in <the six callers>; do
+  gh run list -R "$r" --workflow=ai-review.yml --limit 100 \
+    --json conclusion --jq '[.[].conclusion]|group_by(.)|map("\(.[0])=\(length)")|join(" ")'
+done   # summed across the six by hand
 ```
 
 ```
@@ -155,9 +157,16 @@ declines, plus the 14 pull requests that installed it. "Deployed to 14
 repositories" describes reach; 13 of those repositories have exercised it
 exactly once, on the change that added it.
 
-That reframes the cost too: each of those repositories stores an API credential
-for the lane. **A credential in 14 places, for a control 13 of them have used
-once, is the part worth acting on** — and none of the three measurements above
+That reframes the cost too. The caller passes the key explicitly rather than
+using `secrets: inherit`, so it is stored per repository — measured, not assumed:
+
+```bash
+gh api repos/$r/actions/secrets --jq '[.secrets[].name]|index("OPENAI_API_KEY")'
+# non-null in 14 of 14
+```
+
+**A credential in 14 places, for a control 13 of them have used once, is the
+part worth acting on** — and none of the three measurements above
 would have surfaced it, because all three were asking whether the control
 *worked* rather than whether it was *used*.
 
@@ -183,8 +192,9 @@ confirmation when the new instrument is silently failing.
    denominator silently held two different kinds of thing. Before believing any
    rate, ask what is *in* the denominator and split it.
 2. **The mechanism was invented, not measured.** The skips were blamed on a
-   draft-PR gate. There were **zero** draft pull requests across 80. The
-   condition had several branches and the one fitting the story was chosen
+   draft-PR gate. There were **zero** draft pull requests across 80 —
+   `gh pr list -R "$r" --state all --limit 40 --json isDraft --jq '[.[]|select(.isDraft)]|length'`
+   returns 0 on each. The condition had several branches and the one fitting the story was chosen
    without checking which fired. *Reading a condition is not measuring which
    branch of it fires.*
 3. **Cancellation was counted as lost coverage.** A superseded run being
