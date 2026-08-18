@@ -105,9 +105,7 @@ git log --format='%an  %s' -- <path>
 
 A session edited a file and took longer than the interval to compose its commit.
 The timer committed first, attributing the change to **the human's git identity**
-and replacing the reasoning with a generic subject. Two forms occur —
-`chassis: sync N changed file(s)` and `sync: continuity pass, N file(s)` — and
-both are counted below. The
+and replacing the reasoning with a generic subject. The
 session's own `git commit` then reported nothing to commit — which is how the
 race was noticed at all — and why the change was made was never written down.
 
@@ -115,15 +113,22 @@ race was noticed at all — and why the change was made was never written down.
 not by themselves prove the ordering; that came from watching the session's own
 commit find an empty index.*
 
-Over four days the timer produced 44% of that repository's commits:
+Over four days the timer produced **24%** of that repository's commits:
 
 ```bash
-git log --since=<date> --oneline | wc -l                       # 199
-git log --since=<date> --format='%s' \
-  | grep -cE '^chassis: sync|^sync: continuity'                # 87
+git log --since=<date> --oneline | wc -l                    # 202
+git log --since=<date> --format='%s' | grep -c '^<timer-subject>'   #  49
 ```
 
-*Not checked: how often the race is actually lost. 44% is the timer's share of
+**Count only the subject the timer itself writes.** A draft of this section said
+44%, reached by widening the pattern to a second `sync:`-prefixed subject after a
+reviewer asked for a command that matched more than one form. That second subject
+is written by an **on-demand** script, not the timer — 38 commits from a
+different producer, folded into a figure labelled "the timer's". *Widening a
+pattern to satisfy a review finding, without rechecking that the wider set still
+answers the same question, is how a corrected number becomes a worse one.*
+
+*Not checked: how often the race is actually lost. 24% is the timer's share of
 commits, not the frequency with which it beats a session.*
 
 **This is a race, not a certainty** — the timer wins only when the session takes
