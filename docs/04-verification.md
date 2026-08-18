@@ -113,78 +113,63 @@ The draft concluded **"the control produces a review on one trigger in
 fourteen"** and blamed `cancel-in-progress` plus a draft-pull-request gate. The
 number was real; every inference drawn from it was wrong.
 
-### Three measurements of the same thing, each changing the answer
+### Two measurements of the same thing, and they disagree
 
-**Measurement 1 — count runs.** 7.4% success. Conclusion drawn: the control is
-broken. *Wrong.*
-
-**Measurement 2 — count runs, split by branch, dropping bot branches:**
+**Measurement 1 — count run outcomes.**
 
 ```bash
-gh run list -R "$r" --workflow=ai-review.yml --limit 100 --json conclusion,headBranch \
-  --jq '[.[]|select(.headBranch|startswith("dependabot/")|not)]
-        |"\(length) \([.[]|select(.conclusion=="success")]|length)"'
-# summed by hand across all 14 callers -> 18 of 23 non-bot runs succeeded
+for r in <the six callers>; do
+  gh run list -R "$r" --workflow=ai-review.yml --limit 100 \
+    --json conclusion --jq '[.[].conclusion]|group_by(.)|map("\(.[0])=\(length)")|join(" ")'
+done   # summed across the six by hand
 ```
 
-Bot traffic was the whole story:
+```
+cancelled 52 (54.7%)   skipped 35 (36.8%)   success 7 (7.4%)   failure 1
+```
+
+Conclusion drawn: the control is broken.
+
+**Measurement 2 — split the population, because the denominator holds two
+different kinds of thing:**
 
 ```bash
 gh run list -R "$r" --workflow=ai-review.yml --limit 100 --json headBranch \
   --jq 'length as $t | ([.[].headBranch|select(startswith("dependabot/"))]|length) as $b
         | "\($b) of \($t)"'
-# 33 of 34   32 of 33   16 of 17   5 of 6
 ```
 
-Conclusion drawn: the control works fine. *True, and still not the answer* — it
-counts **runs**, and the unit this question is about is a **pull request**.
-
-**Measurement 3 — count the unit the question is actually about:**
-
-```bash
-gh pr list -R "$r" --state all --limit 100 --json author,createdAt,title \
-  --jq '[.[]|select(.author.login|test("dependabot";"i")|not)]
-        |sort_by(.createdAt)|reverse|.[0]|"\(.createdAt[0:10])  \(.title)"'
+```
+33 of 34    32 of 33    16 of 17    5 of 6
 ```
 
-**In 13 of the 14 caller repositories the newest human pull request IS the one
-that installed the panel**, all on the same day. One repository has had a single
-human pull request since.
+Bot pull requests, which the workflow declines on purpose, are nearly the entire
+run population in the four repositories checked. **`7.4%` was the ratio of bot
+traffic to everything else — a fact about the traffic mix, not about the
+control.**
 
-So the control is not broken and is not fine. **It has had almost nothing to
-review.** Its entire measurable history is bot pull requests it correctly
-declines, plus the 14 pull requests that installed it. "Deployed to 14
-repositories" describes reach; 13 of those repositories have exercised it
-exactly once, on the change that added it.
+That is the whole finding. What the *right* number is would need a different
+measurement again — the unit this question is about is a pull request reaching a
+verdict, and runs are not pull requests. **This section deliberately stops here
+rather than asserting a coverage rate**, because an earlier draft asserted one
+from run counts and was wrong.
 
-That reframes the cost too. The caller passes the key explicitly rather than
-using `secrets: inherit`, so it is stored per repository — measured, not assumed:
+**Not checked, and it matters:** the eight callers not inspected; whether the
+non-bot runs correspond one-to-one with human pull requests; and the review
+*quality*, which none of this measures at all.
 
-```bash
-gh api repos/$r/actions/secrets --jq '[.secrets[].name]|index("OPENAI_API_KEY")'
-# non-null in 14 of 14
-```
+### A second instrument failure, in the attempt to fix the first
 
-**A credential in 14 places, for a control 13 of them have used once, is the
-part worth acting on** — and none of the three measurements above
-would have surfaced it, because all three were asking whether the control
-*worked* rather than whether it was *used*.
+Scoping pull requests to a post-install window returned **0** for every
+repository. That was not the answer — `gh --jq` does not accept `--arg`, so the
+filter errored and a shell default rendered the error as `0`. A positive control
+caught it: the same query with a date of `2020-01-01` also returned "0", which is
+impossible.
 
-### A warning about measurement 3, because it nearly went wrong too
-
-The first attempt to scope pull requests to the post-install window returned
-**0** for every repository. That was not the answer — `gh --jq` does not accept
-`--arg`, so the filter errored and a shell default rendered the error as `0`.
-A positive control caught it: the same query with a date of `2020-01-01` also
-returned "0", which is impossible.
-
-```bash
-# run the same filter with a date that MUST match, before believing a zero
-```
-
-**Three instruments, three answers, and the fourth attempt was a broken query
-that agreed with the third.** Agreement with your previous result is not
-confirmation when the new instrument is silently failing.
+**Run any filter with a value that MUST match before believing a zero.** And note
+what nearly happened: a broken query agreed with the previous conclusion.
+**Agreement with your last result is not confirmation when the new instrument is
+silently failing.**
 
 ### The three errors, which are the transferable part
 
@@ -215,8 +200,9 @@ conclusion counts could not establish the causal story; one named the internal
 contradiction — the same rate cannot be "the design working correctly" and
 "evidence the control is absent". A fourth reviewer, given the raw API access
 rather than the write-up, produced the branch-level decomposition that killed the
-claim outright. **A single reviewer, or a reviewer handed the conclusion instead
-of the query, would have let it through.**
+claim outright. **In this instance no single lane found everything**: one named
+the contradiction, another the unsupported mechanism, and the decomposition came
+from the reviewer given raw query access rather than the write-up.
 
 **Not checked:** whether coverage holds outside the 100-run window; whether the
 `skipped` conclusions are all bot traffic in the eight callers not individually

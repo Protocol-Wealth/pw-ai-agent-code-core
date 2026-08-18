@@ -105,7 +105,11 @@ git log --format='%an  %s' -- <path>
 
 A session edited a file and took longer than the interval to compose its commit.
 The timer committed first, attributing the change to **the human's git identity**
-and replacing the reasoning with a generic `sync: N changed file(s)`. The
+and replacing the reasoning with a generic `sync: N changed file(s)`; the
+session's own `git commit` then reported nothing to commit, which is how the race
+was noticed at all. *The commands below show the schedule and the resulting
+commit shape — they do not by themselves prove the ordering; that came from
+observing the session's own commit find an empty index.* The
 session's own commit then found nothing to commit, and why the change was made
 was never written down. Over four days the timer produced 44% of that repository's commits:
 
