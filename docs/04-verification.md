@@ -41,6 +41,33 @@ Two more of the same family, worth naming because they look nothing alike:
 **The general rule:** if a guard has a degraded/warning path, ask what fraction of
 real failures land in it. If the answer is "most of them", it is not a guard.
 
+### The negative control needs its own negative control
+
+**A sabotage that does not change behaviour proves nothing about the guard.**
+
+Breaking a rule is only evidence if the break would actually have mattered. A
+denylist read `content/|legal/|disclosur|polic|terms|privacy|agreement|complian`.
+To prove the test could catch a weakened rule, `content/|legal/` was deleted —
+and every case still came out the same, because `terms`, `privacy` and `polic`
+caught the same paths anyway. The suite reported "all passing" and that was
+*correct*; the sabotage had changed nothing.
+
+Replacing the whole pattern with one that matched nothing failed nine cases
+immediately. That was the real control.
+
+Before trusting a RED-verify, ask the same question you ask of a scan: **could
+this break have produced a different answer?** A mutation inside a redundant
+clause is a no-op, and a no-op mutation that "passes" is the same false assurance
+as a scan that searched nothing — arrived at from the opposite direction.
+
+Two cheap habits:
+
+- **Delete the whole rule, not one clause of it.** If the guard still passes, the
+  rule was never load-bearing and that is itself a finding.
+- **Check the exit status, not the printed output.** `harness | tail` reports the
+  status of `tail`, so a failing suite reads as exit 0. This was hit *in the same
+  session that documented it*, while verifying a guard against exactly this class.
+
 ## 2. A scan that searched nothing looks like a scan that found nothing
 
 **Every negative result needs a positive control.** Before trusting "0 findings",
@@ -53,6 +80,27 @@ prove the scan *could* have returned one.
   command silently runs in the wrong repository. A failed `cd` in an `&&` chain
   short-circuits the rest, so a following heredoc never writes.
 - **Reconcile counts on every batch job**: compare output count to input count.
+
+### A pattern that cannot match returns zero and reads exactly like clean
+
+The most common form of this is not an unset variable. It is a **search term that
+was never in the text.**
+
+A document said *"so does the base **branch** advancing"*. The sweep looked for
+`base advancing`. Zero hits, reported as "the class is closed" — and the sentence
+shipped unchanged. Review found it again the next round, in the same file, at the
+line that had just been declared clean.
+
+The failure is invisible because the output is identical to success. Three
+defences, in order of cost:
+
+1. **Sweep on the shortest distinctive stem**, not the phrase you remember. `advanc`
+   near `base` finds every inflection; `base advancing` finds one.
+2. **Positive-control the pattern**: confirm it matches at least one known
+   occurrence before trusting a zero. If it cannot find the instance you are
+   holding, it will not find the ones you are not.
+3. **Grep for the concept, then read**, rather than grepping for the exact wording
+   and trusting the count. Wording varies; the concept does not.
 
 ### The subtler version: a positive control that proves the wrong thing
 
@@ -221,6 +269,42 @@ And a claim in a commit message is a claim like any other. Twice, a message
 asserted a fix was applied everywhere when it had been applied in one of three
 places — caught only because a reviewer checked the claim against the tree rather
 than believing it.
+
+## 7b. Fix the class, not the line the review cited
+
+**A review names one occurrence. The defect usually lives in several.** Fixing
+only the cited line is how a single finding becomes three rounds.
+
+Measured on one pull request: a documentation claim was wrong in four files.
+Round one cited file A, which was fixed and the class declared closed. Round two
+cited file B. Round three cited a *second sentence in file B* that the sweep for
+round two had missed. Each round cost a full adversarial review, and every fix
+was individually correct.
+
+The reviewer is not being pedantic by re-raising it. It is reporting what it can
+see, one instance at a time, because that is what a diff shows it.
+
+**The habit:** when a finding is about a claim, a name, a constant or a pattern —
+anything that can appear more than once — the fix is a *sweep*, not an edit. State
+the sweep and its result in the adjudication, so the next round can check the
+sweep rather than re-find the instance.
+
+Three traps inside the sweep itself, each of which has produced a false "clean":
+
+- **The pattern must be able to match** (see §2 above — this is the same defect
+  wearing a different hat, and the two compound: an incomplete fix verified by an
+  unmatchable sweep reports success twice).
+- **Hidden files are excluded by default** in some tools. One sweep returned a
+  confident 11 hits and missed the file holding 7 more — the dotfile whose entire
+  purpose was the thing being swept for.
+- **Case matters.** A case-sensitive sweep missed a variant in a change whose
+  subject *was* case variants.
+
+**Not everything that matches should change.** A dated record — a changelog entry,
+a decision log, a release note — describes what was true when written. Rewriting
+it to match current behaviour makes the history wrong in order to fix a document
+that was not making a present-tense claim. Sweep the whole repository, then decide
+per hit; say which ones you deliberately left.
 
 ## 8. Shell-specific traps that produce silent success
 
