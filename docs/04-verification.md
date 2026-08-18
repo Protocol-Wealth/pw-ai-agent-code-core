@@ -87,81 +87,97 @@ and was retracted.** The retraction is the finding.
 
 ### The claim that was nearly published here
 
-A reusable adversarial-review workflow was consumed by 16 repositories. Counting
-run outcomes across six consumers:
+A reusable adversarial-review workflow is called by **14 repositories**:
 
 ```bash
-for r in <consumers>; do
-  gh run list -R "$r" --workflow=ai-review.yml --limit 100 \
-    --json conclusion --jq '[.[].conclusion]|group_by(.)|map("\(.[0])=\(length)")|join(" ")'
-done
+gh search code --owner <org1> --owner <org2> \
+  "ci-workflows/.github/workflows/ai-review.yml" --limit 30 \
+  --json repository,path --jq '.[]|"\(.repository.nameWithOwner)\t\(.path)"' | sort -u
+# 16 hits, 2 of which are inside the workflow repo itself -> 14 callers
+```
+
+Counting **run outcomes** across six of those callers:
+
+```bash
+gh run list -R "$r" --workflow=ai-review.yml --limit 100 \
+  --json conclusion --jq '[.[].conclusion]|group_by(.)|map("\(.[0])=\(length)")|join(" ")'
 ```
 
 ```
 cancelled 52 (54.7%)   skipped 35 (36.8%)   success 7 (7.4%)   failure 1
 ```
 
-The draft concluded: **"the control produces a review on one trigger in
-fourteen"**, and attributed it to `cancel-in-progress` plus a draft-pull-request
-gate. Both the number and the mechanism were wrong.
+The draft concluded **"the control produces a review on one trigger in
+fourteen"** and blamed `cancel-in-progress` plus a draft-pull-request gate. The
+number was real; every inference drawn from it was wrong.
 
-### What the measurement actually showed
+### What the same data shows when the population is split
 
-Group the same runs **by branch** and take each branch's *last* run — the
-question is whether the final state of a pull request was reviewed, not how many
-runs it took:
+The question is whether a pull request a human opened got reviewed. So drop bot
+branches and count runs on the rest, across **all 14** callers:
 
 ```bash
-gh run list -R "$r" --workflow=ai-review.yml --limit 100 \
-  --json conclusion,headBranch,createdAt
-# group by headBranch, drop dependabot/*, take each branch's LAST run
+gh run list -R "$r" --workflow=ai-review.yml --limit 100 --json conclusion,headBranch \
+  --jq '[.[]|select(.headBranch|startswith("dependabot/")|not)]
+        |"\(length) \([.[]|select(.conclusion=="success")]|length)"'
 ```
 
 ```
-dependabot runs excluded: 33, 32, 16, 5   (per repo)
-non-dependabot branches ending on success: 100% in all four repos
+18 of 23 human-PR runs succeeded across all 14 callers
+ 7 of  7 on one org's six repositories
 ```
 
-**Dependabot consumed 33 of 34 runs, 32 of 33, 16 of 17, 5 of 6.** The workflow
-excludes bot pull requests deliberately. So `7.4%` was measuring *the ratio of
-dependency bumps to real work in the run log* — a fact about the population, not
-about the control. Every real pull request was reviewed.
+The five failures are each repository's **own installation pull request** on one
+day, `chore/ai-review-panel`, every one followed by a success on the same branch:
+
+```bash
+gh run list -R "$r" --workflow=ai-review.yml --limit 20 \
+  --json conclusion,headBranch,createdAt \
+  --jq '.[]|select(.headBranch|startswith("dependabot/")|not)
+        |"\(.createdAt[0:10]) \(.conclusion) \(.headBranch)"'
+```
+
+**Dependabot generated almost every run** — 33 of 34 in one repository, 32 of 33,
+16 of 17, 5 of 6 — and the workflow skips bot pull requests deliberately, for a
+documented reason. So `7.4%` was the ratio of dependency bumps to real work in
+the run log: **a fact about the traffic, not about the control.** The control was
+doing its job.
 
 ### The three errors, which are the transferable part
 
-1. **A rate over a population you have not decomposed is not a measurement.**
-   The denominator silently contained two different kinds of thing. Before
-   believing any rate, ask what is *in* the denominator and split it.
-2. **The mechanism was invented, not measured.** The skips were attributed to a
+1. **A rate over a population you have not decomposed is not a measurement.** The
+   denominator silently held two different kinds of thing. Before believing any
+   rate, ask what is *in* the denominator and split it.
+2. **The mechanism was invented, not measured.** The skips were blamed on a
    draft-PR gate. There were **zero** draft pull requests across 80. The
-   condition had several branches and the one that fit the story was chosen
-   without checking which actually fired. *Reading a condition is not measuring
-   which branch of it fires.*
+   condition had several branches and the one fitting the story was chosen
+   without checking which fired. *Reading a condition is not measuring which
+   branch of it fires.*
 3. **Cancellation was counted as lost coverage.** A superseded run being
-   cancelled does not prevent the final commit from being reviewed. Cheap
-   cancellation and poor coverage are independent claims and need separate
-   evidence.
+   cancelled does not stop the final commit being reviewed — those runs held zero
+   jobs and lived 1–2 seconds. Cheap cancellation and poor coverage are
+   independent claims needing separate evidence.
 
 ### The check that would have caught it immediately
 
-**Measure the outcome on the unit you actually care about.** The unit here is a
-pull request reaching its final state, not a workflow run. Runs are what the API
-returns easily; branches are what the question is about. Whenever a convenient
-denominator is not the unit of interest, that gap is where this error lives.
+**Measure the outcome on the unit you actually care about.** The unit is a pull
+request reaching a verdict, not a workflow run. Runs are what the API returns
+easily; branches are what the question is about. **Wherever the convenient
+denominator is not the unit of interest, this error lives.**
 
-**How it was caught:** three independent CLI reviewers were given the draft and
-the source documents. Two returned REJECT; both independently said the
-conclusion counts could not establish the causal story, and one named the
-internal contradiction — the same rate cannot be "the design working correctly"
-and "evidence the control is absent". That sent the author back to measure the
-mechanism, and the measurement killed the finding. **A single reviewer, or a
-reviewer handed the conclusion instead of the command, would have let it
-through.**
+**How it was caught:** three independent CLI reviewers were given the draft plus
+the source documents. Two returned REJECT and both said, independently, that
+conclusion counts could not establish the causal story; one named the internal
+contradiction — the same rate cannot be "the design working correctly" and
+"evidence the control is absent". A fourth reviewer, given the raw API access
+rather than the write-up, produced the branch-level decomposition that killed the
+claim outright. **A single reviewer, or a reviewer handed the conclusion instead
+of the query, would have let it through.**
 
-**Not checked:** the other ten consumer repositories, and whether coverage holds
-outside the 100-run window. Non-dependabot branches are sparse — one per repo in
-that window — so "100% coverage" is weakly supported. What *is* strongly
-supported is that 7.4% never measured coverage at all.
+**Not checked:** whether coverage holds outside the 100-run window; whether the
+`skipped` conclusions are all bot traffic in the eight callers not individually
+inspected; and the review *quality* — this measures only that a verdict was
+produced, never whether it was any good.
 
 ## 2. A scan that searched nothing looks like a scan that found nothing
 
@@ -223,7 +239,9 @@ never execute. The exclusion held anyway, through an unrelated upstream step —
 the outcome was safe and the control was theatre, which is the combination that
 teaches misplaced confidence. **Run the control against the artifact the check
 will actually be given**; if a pipeline rewrites paths, a path-based control is
-only meaningful downstream of that rewrite.
+only meaningful downstream of that rewrite. *Not checked in that incident: how
+many other controls in the same pipeline were verified against the pre-transform
+tree — the audit was stopped after the first one was found.*
 
 ### The same lesson from the other direction: check precision, not just non-emptiness
 
