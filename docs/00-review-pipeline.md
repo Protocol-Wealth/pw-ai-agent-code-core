@@ -238,3 +238,50 @@ and even then, keep the outputs separate so you can see which reviewer earned it
   separate section and become issues. An author patching pre-existing defects
   inside a fix PR grows the diff, which grows the surface, which produces more
   findings. Separating them is what lets a PR converge at all.
+
+## What belongs in CI, once review has moved local
+
+Moving review to the developer's machine raises a second question immediately:
+what is hosted CI still *for*? Left unasked, the answer defaults to "everything
+it did before", and you pay for the same checks twice — once locally in seconds,
+once remotely in minutes.
+
+**One question decides it: what can this check do that the pre-push hook cannot?**
+
+Three answers qualify, and in our experience only three:
+
+1. **It needs credentials the developer machine does not hold** — a deploy
+   identity, cloud tokens, a scoped token for reading a private sibling repo.
+2. **It must run on the merged result**, not on a branch tip.
+3. **It must run with no developer present** — a bot-authored dependency PR, or
+   a schedule.
+
+Everything else is duplicated spend and a slower signal.
+
+**Measure before cutting, because the bill is not shaped like the runtime.**
+GitHub Actions bills **per job, rounded up to a whole minute**, so a nine-second
+job costs exactly what a fifty-five-second one does. A fan-out of small jobs is
+mostly rounding. Ours re-ran roughly eight billed minutes per pull request of
+work the pre-push hook had already done — and the local run of the *same* test
+command took 2.35 seconds.
+
+**Two failure modes worth naming, both observed:**
+
+- **A path-filter optimisation that blocks merges.** Jobs were marked *required*
+  by branch protection and simultaneously `if:`-gated to skip on
+  documentation-only changes. A skipped required check is never satisfied, so
+  documentation pull requests could not merge, ever. The job that computed the
+  filter also cost a full billed minute to decide whether to skip other jobs. An
+  optimisation that costs money and blocks merges is not an optimisation.
+- **"Require branches to be up to date" serialises the queue.** Every merge to
+  the default branch invalidates every other open pull request. On a repository
+  with several in flight this is quadratic busywork, and it is the same shape as
+  a mandatory-review gate: work that feels like rigour and changes no outcome.
+
+**Do not apply one recipe to every repository.** Ours ended with a single
+required check on the application repositories — a committed-secret scan, which
+qualifies under rule 2 because it runs on what actually landed and a leaked
+secret is unrecoverable. But the infrastructure repository kept **all fourteen**
+of its terraform contexts, because every one needs cloud credentials and
+qualifies under rule 1. Normalising it to match the others would have removed
+real protection. The rule is the constant; the answer is per-repository.

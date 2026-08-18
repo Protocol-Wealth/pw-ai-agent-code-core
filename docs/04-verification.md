@@ -233,6 +233,73 @@ from the reviewer given raw query access rather than the write-up.
 inspected; and the review *quality* — this measures only that a verdict was
 produced, never whether it was any good.
 
+## 1c. A guard that cannot PASS is the mirror of one that cannot fail
+
+Section 1 covers the check that reports green it never observed. This is its
+mirror, and it hides considerably better.
+
+**The instance.** A repository's auto-merge workflow required a completed and
+successful check named `Review completion gate` on the exact head SHA before
+arming. That check had been deleted the same morning, along with the review
+ceremony it belonged to. Nothing emitted it any more — so the condition could
+never be satisfied, and the step exited 1 on **every** pull request.
+
+**Why it survived.** It failed *closed*. Refusing to auto-merge looks like
+caution. A guard that cannot fail eventually gets caught, because something
+broken ships. A guard that cannot pass reports false red indefinitely and reads
+as the system working as designed. Nobody investigates a machine that is being
+careful.
+
+**The test is the same for both, and it is cheap: can this check return the
+other answer?** Break the condition deliberately and watch it flip. A check that
+cannot flip is measuring nothing, whichever direction it is stuck in.
+
+**Where the class comes from.** An incomplete deletion. Removing a control leaves
+behind everything that *read* it — callers, contract tests, comments, and in this
+case a policy script asserting the deleted gate's own shape. One incomplete
+deletion produced six separate defects across two days here. Deleting a control
+means sweeping for its readers, case-insensitively, in every spelling it uses.
+See §7b.
+
+## 1d. A check that fails without naming what failed is the most expensive shape
+
+A policy contract script held seventeen assertions of the form:
+
+```bash
+grep -Fq 'some required string' "$WORKFLOW"
+```
+
+under `set -euo pipefail`. Under `set -e`, a failing `grep -Fq` **exits 1 and
+prints nothing**. The CI log read, in its entirety:
+
+```
+##[error]Process completed with exit code 1
+```
+
+Running it locally reproduced the same silence. `bash -x` was the only way to
+learn which of the seventeen had fired.
+
+**The fix is one function and it is permanent:**
+
+```bash
+assert_workflow() {
+  if ! grep -Fq -- "$1" "$WORKFLOW"; then
+    echo "contract FAILED — the workflow no longer contains:" >&2
+    echo "    $1" >&2
+    exit 1
+  fi
+}
+```
+
+**Generalise it.** Any assertion whose failure mode is an exit code rather than a
+sentence will cost somebody a debugging session — a bare `test`, a `[ -f x ] ||
+exit 1`, a silent `grep -q`. Naming costs one line, once. Not naming costs a
+session every time it fires, and the sessions are not free.
+
+**Then prove the repair in both directions.** Break a real guard, confirm the
+check fails *by name*, restore it, confirm it passes. A repaired check that has
+only been observed passing is not yet evidence of anything.
+
 ## 2. A scan that searched nothing looks like a scan that found nothing
 
 **Every negative result needs a positive control.** Before trusting "0 findings",
@@ -324,6 +391,47 @@ the governing source is the file's APP1 segment, and nobody opened one file.
 So a positive control needs a complement: **adjudicate a sample of what the scan
 returned.** Non-emptiness is not evidence of correctness in either direction — an
 empty result can mean the query is wrong, and a non-empty result can be 80% noise.
+
+## 2b. Before carefully migrating N things, measure how many are used
+
+A rename or a migration plan silently assumes every item in its scope is load-
+bearing. That assumption is rarely tested, and it is the difference between a
+week of careful work and an afternoon of deletion.
+
+**The instance.** A plan to rename 55 authorization role-sets across 45 files —
+replacing officer titles with capability names, behaviour-preserving, with an
+equivalence test. Sound work. The repository owner interrupted with: *"you are
+repeating the mistake of modifying things that should just be removed."*
+
+Measured instead. Of 35 route files carrying one of those gates, **nine had no
+caller in either consuming frontend and no request in thirty days of traffic
+logs.** Supporting evidence: **zero** authorization-denial rows in the audit log
+across 37,098 rows and four months — no gate in that system had ever refused a
+request.
+
+Every route deleted is a role-set that never needed migrating. **The sequencing
+inverts: delete first, migrate the remainder.**
+
+**How to establish "is this used", strongest evidence to weakest:**
+
+1. **Does a caller exist?** Static, complete, time-independent. Search the route
+   or symbol across every consuming repository. Weakness: a path assembled by
+   string concatenation will not match a literal search.
+2. **Traffic.** Group request logs by path. Weakness: **log retention is not the
+   life of the system.** Thirty days is a common default, and a quarterly-use
+   route is indistinguishable from a dead one inside that window.
+3. **Audit or telemetry events.** Weakest — read paths frequently emit none at
+   all, so absence carries almost no signal.
+
+**Report the limits with the finding.** These are *deletion candidates requiring
+per-item confirmation*, never "proven dead". Stating the window and the method is
+what lets somebody else disagree with you productively.
+
+**And apply §2 to your own measurement.** The first pass of this analysis
+searched a source directory that did not exist in that repository — the tool
+contributed nothing, silently, and five live routes were nearly filed as dead.
+A usage survey is exactly the kind of negative result that needs a positive
+control.
 
 ## 3. Mocks agree with the bug
 
