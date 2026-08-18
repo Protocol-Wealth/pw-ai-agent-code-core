@@ -225,8 +225,9 @@ actually gates merges lives in a **ruleset**, which is a different endpoint:
 $ gh api repos/OWNER/REPO/branches/main/protection -q '.required_status_checks'
                                     # empty
 
-$ gh api repos/OWNER/REPO/rulesets -q '.[] | "\(.id)\t\(.name)\t\(.enforcement)"'
-20606587        main    active
+$ gh api --paginate 'repos/OWNER/REPO/rulesets?includes_parents=true' \
+    -q '.[] | "\(.id)\t\(.name)\t\(.enforcement)\t\(.source_type)"'
+20606587        main    active  Repository
 
 $ gh api repos/OWNER/REPO/rulesets/20606587 \
     -q '.rules[] | select(.type=="required_status_checks") | .parameters
@@ -250,19 +251,22 @@ Only now does `strict=true` say anything about `main`. A verification that reads
 without reading its scope has confirmed that a rule exists somewhere, which is a different
 claim from the one it is being used to support.
 
-One finding on this section is worth recording because it was **wrong**, and refuting it
-took less time than applying it would have. A reviewer called the listing incomplete
-without `includes_parents=true`, on the grounds that an inherited organisation or
-enterprise ruleset would be omitted. The parameter exists; its default is `true`
-("Include rulesets configured at higher levels that apply to this repository. Default:
-`true`"), so the listing already includes inherited rules and adding the flag changes
-nothing. Checked against the API reference before editing, which is the whole discipline:
-a fix applied to a false premise injects a defect and manufactures another round.
+`includes_parents` and `--paginate` are written out on purpose, and the reason is a small
+lesson in itself. Two consecutive review rounds disagreed about that parameter's default —
+one said `true`, so the listing was already complete; the next said `false`, so it was
+missing inherited rules. The API reference says `true` ("Include rulesets configured at
+higher levels that apply to this repository. Default: `true`"), and the disagreement cannot
+be settled empirically from an account with no organisation above it.
 
-What the finding does point at is real, though it is a different thing: because the listing
-mixes repository rules with inherited ones, the response is the only place that says WHERE
-a rule lives. Read `source_type` (and `source`) per ruleset, or you will look for a rule in
-the repository settings that is defined an organisation above it.
+**So stop depending on the answer.** A verification whose correctness rests on a default
+nobody in the room can demonstrate is one argument away from being wrong, and writing out
+six characters removes the dependency entirely. Pagination is the same shape: 30 rulesets is
+not a plausible number today, which is exactly the kind of assumption that expires quietly.
+
+`source_type` is in the query for the related reason: the listing mixes repository rules
+with inherited ones, and the response is the only place that says WHERE a rule lives.
+Without it you will look in the repository settings for a rule defined an organisation
+above them.
 
 Two consequences, and the second is the one that stings:
 
@@ -341,12 +345,36 @@ line, the quote *is* the last line and a truncated review passes. The last-line 
 defeats every shape we actually observed, which is worth having, but the property it
 buys is "harder to satisfy by accident", not "impossible to satisfy by accident."
 
-The unforgeable version is the one already used for the refusal token, applied to the
-completion marker too: a **per-run nonce**, generated after the reviewed material is
-fixed, so no content under review can contain it. Ask for `VERDICT-<nonce>:` and the
-question stops being positional. That the same file already contained the technique and
-did not apply it to the second marker is itself the recurring shape — a lesson learned
-in one place and not carried across the room.
+A per-run nonce is the obvious next move, and it is worth being precise about what it
+buys, because the first version of this paragraph called it "unforgeable" — making the
+exact overclaim the section above is about, two paragraphs after making it. A reviewer
+caught that.
+
+A nonce generated after the reviewed material is fixed means **no content under review can
+contain it**. That is a collision guarantee, and it is the right fix for the refusal token,
+where the failure was a fixed sentinel appearing in the diff that defined it. It is *not*
+an authenticity guarantee for a completion marker: the nonce is handed to the model in the
+prompt, so a truncated answer can echo `VERDICT-<nonce>:` and stop there, and the guard
+accepts it. Same string, different threat — one is "reviewed text accidentally matches",
+the other is "the model's own output matches without meaning it".
+
+What actually helps, in the order it pays:
+
+1. **Check provenance, not position.** Every version of the guard asked where the marker
+   SITS; none asked where it CAME FROM. Requiring that the verdict line not appear verbatim
+   in the reviewed diff closes the observed shape completely, costs nothing, and cannot
+   fail a genuine one-sentence verdict. Implemented and pinned by a table test.
+2. **Signals from outside the model's output.** Process exit status, whether the timeout or
+   turn budget was reached, token counts, and structured-output validation enforced at the
+   tool-call layer rather than parsed out of prose. These are the only ones the model cannot
+   produce.
+3. **Positional constraints**, which raise the cost and are worth keeping, as long as nobody
+   writes "unforgeable" next to them.
+
+The residual is stated rather than implied: a lane could still quote a line from a file in
+its worktree that the diff does not contain. Narrower — it has to choose to read that file
+AND stop on that line — and the fix for it (requiring the nonce) trades a silent hole for a
+loud false negative on the flakier lane. Not taken without compliance data.
 
 ## 4b. Proportion the evidence to the surface, and report only what you ran
 
