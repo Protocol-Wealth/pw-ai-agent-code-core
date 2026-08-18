@@ -68,6 +68,79 @@ Two cheap habits:
   status of `tail`, so a failing suite reads as exit 0. This was hit *in the same
   session that documented it*, while verifying a guard against exactly this class.
 
+## 1b. A check that never ran is not a check, however well it would have failed
+
+Section 1 is about a check whose logic cannot report failure. This is a different
+shape: the check is **correctly implemented**, it *does* fail when it should, and
+it almost never runs.
+
+A reusable adversarial-review workflow was consumed by **16 repositories** — on
+paper the most broadly deployed control in the estate. Measured across six
+consumers:
+
+```bash
+for r in <consumer repos>; do
+  gh run list -R "$r" --workflow=ai-review.yml --limit 100 \
+    --json conclusion --jq '[.[].conclusion]|group_by(.)|map("\(.[0])=\(length)")|join(" ")'
+done
+```
+
+```
+cancelled  52   54.7%
+skipped    35   36.8%
+success     7    7.4%
+failure     1    1.1%
+TOTAL      95
+```
+
+**It produced a review on roughly one trigger in fourteen.**
+
+Two mechanisms, each individually correct:
+
+- `concurrency: cancel-in-progress: true`, keyed per pull request. Correct
+  design — a superseded review should not be paid for twice. But **an agent
+  pushes many small commits in quick succession**, so under agent-driven
+  development this cancels nearly everything.
+- A job gate, `if: draft == false && ...`. Correct — do not review drafts. But if
+  opening a draft pull request is the house habit, that gate silently disables
+  review for the entire repository.
+
+**Neither is a bug, and that is the point: the failure is emergent.** It is also
+invisible from every angle an operator normally looks from — the workflow file is
+correct, no run is red, no alert fires, and the control reports as deployed
+everywhere.
+
+### Deployment is not coverage
+
+Counting repositories that reference a control measures adoption, not protection.
+
+**Measure the completion rate of every gate you rely on, per repository:**
+`(times it ran to a verdict) / (times it should have)`. A control at 7% is
+closer to absent than to present, and nothing in a normal dashboard says so.
+
+### The correction we nearly published instead
+
+The first pass of this analysis filed the 54.7% cancellation rate as *waste* and
+recommended tuning it down. Re-measured:
+
+```bash
+gh run list -R "$r" --workflow=ai-review.yml --limit 40 \
+  --json conclusion,createdAt,updatedAt
+```
+
+Cancelled runs die at a **median of 1 second** (max 8s; 21 runs totalling 0.7
+minutes). That is the concurrency design working exactly as intended, at
+negligible cost. A completed review takes 35s.
+
+The defect was never cost — it was that the review does not happen. **Optimising
+a working feature you have misfiled as a defect is a real cost with no
+corresponding benefit**, and it is the same family as hardening a control nobody
+requires.
+
+**Not checked:** whether the other ten consumer repositories show the same
+distribution, and whether the `skipped` runs trace specifically to draft pull
+requests rather than to another branch of that condition.
+
 ## 2. A scan that searched nothing looks like a scan that found nothing
 
 **Every negative result needs a positive control.** Before trusting "0 findings",
