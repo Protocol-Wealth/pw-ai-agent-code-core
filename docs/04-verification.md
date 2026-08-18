@@ -161,7 +161,17 @@ non-bot runs correspond one-to-one with human pull requests; and the review
 And one more, found afterwards, which is the same lesson a third time: a later
 pass looked for pull requests and found almost none — then a commit-level query
 showed **22 agent-authored commits pushed straight to `main`** in two of those
-repositories. **Absence of pull requests is not absence of work.** Wherever a
+repositories:
+
+```bash
+gh api "repos/$r/commits?since=<install-date>&per_page=100" \
+  --jq '[.[]
+        | select(.commit.message|test("\\(#[0-9]+\\)")|not)   # not a squashed PR
+        | select(.commit.message|test("^Merge ")|not)]        # not a merge commit
+        | length'
+# 15 and 7 in the two repositories; 0 in the others checked
+```
+ **Absence of pull requests is not absence of work.** Wherever a
 control is attached to one flow, measure whether the work is using that flow at
 all before concluding the control is idle.
 
