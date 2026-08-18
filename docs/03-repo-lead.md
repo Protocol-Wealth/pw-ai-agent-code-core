@@ -107,12 +107,19 @@ A session edited a file and took longer than the interval to compose its commit.
 The timer committed first, attributing the change to **the human's git identity**
 and replacing the reasoning with a generic `sync: N changed file(s)`. The
 session's own commit then found nothing to commit, and why the change was made
-was never written down. Over four days, 23% of that repository's commits were the
-timer's.
+was never written down. Over four days the timer produced 23% of that repository's commits:
+
+```bash
+git log --since=<date> --oneline | wc -l                    # 188
+git log --since=<date> --oneline | grep -c '^\w* sync: '     # 43
+```
+
+*Not checked: how often the race is actually lost — 23% is the timer's share of
+commits, not the frequency with which it beats a session.*
 
 **This is a race, not a certainty** — the timer wins only when the session takes
-longer than the interval to commit, which is common for an agent that edits, then
-reasons, then writes a message. Cheap mitigations: have the automation skip paths
+longer than the interval to commit, which happened here, and will happen whenever
+composing the message outlasts the interval. Cheap mitigations: have the automation skip paths
 modified within the last few minutes, or respect a marker the session sets while
 working.
 

@@ -111,48 +111,71 @@ The draft concluded **"the control produces a review on one trigger in
 fourteen"** and blamed `cancel-in-progress` plus a draft-pull-request gate. The
 number was real; every inference drawn from it was wrong.
 
-### What the same data shows when the population is split
+### Three measurements of the same thing, each changing the answer
 
-The question is whether a pull request a human opened got reviewed. So drop bot
-branches and count runs on the rest, across **all 14** callers:
+**Measurement 1 — count runs.** 7.4% success. Conclusion drawn: the control is
+broken. *Wrong.*
+
+**Measurement 2 — count runs, split by branch, dropping bot branches:**
 
 ```bash
 gh run list -R "$r" --workflow=ai-review.yml --limit 100 --json conclusion,headBranch \
   --jq '[.[]|select(.headBranch|startswith("dependabot/")|not)]
         |"\(length) \([.[]|select(.conclusion=="success")]|length)"'
+# summed by hand across all 14 callers -> 18 of 23 non-bot runs succeeded
 ```
 
-```
-18 of 23 human-PR runs succeeded across all 14 callers
- 7 of  7 on one org's six repositories
-```
-
-The five failures are each repository's **own installation pull request** on one
-day, `chore/ai-review-panel`, every one followed by a success on the same branch:
-
-```bash
-gh run list -R "$r" --workflow=ai-review.yml --limit 20 \
-  --json conclusion,headBranch,createdAt \
-  --jq '.[]|select(.headBranch|startswith("dependabot/")|not)
-        |"\(.createdAt[0:10]) \(.conclusion) \(.headBranch)"'
-```
-
-**Dependabot generated almost every run**, which is the whole explanation:
+Bot traffic was the whole story:
 
 ```bash
 gh run list -R "$r" --workflow=ai-review.yml --limit 100 --json headBranch \
-  --jq 'length as $total
-        | ([.[].headBranch|select(startswith("dependabot/"))]|length) as $bots
-        | "\($bots) of \($total)"'
+  --jq 'length as $t | ([.[].headBranch|select(startswith("dependabot/"))]|length) as $b
+        | "\($b) of \($t)"'
+# 33 of 34   32 of 33   16 of 17   5 of 6
 ```
 
-```
-33 of 34    32 of 33    16 of 17    5 of 6
+Conclusion drawn: the control works fine. *True, and still not the answer* — it
+counts **runs**, and the unit this question is about is a **pull request**.
+
+**Measurement 3 — count the unit the question is actually about:**
+
+```bash
+gh pr list -R "$r" --state all --limit 100 --json author,createdAt,title \
+  --jq '[.[]|select(.author.login|test("dependabot";"i")|not)]
+        |sort_by(.createdAt)|reverse|.[0]|"\(.createdAt[0:10])  \(.title)"'
 ```
 
-The workflow skips bot pull requests deliberately, for a documented reason. So `7.4%` was the ratio of dependency bumps to real work in
-the run log: **a fact about the traffic, not about the control.** The control was
-doing its job.
+**In 13 of the 14 caller repositories the newest human pull request IS the one
+that installed the panel**, all on the same day. One repository has had a single
+human pull request since.
+
+So the control is not broken and is not fine. **It has had almost nothing to
+review.** Its entire measurable history is bot pull requests it correctly
+declines, plus the 14 pull requests that installed it. "Deployed to 14
+repositories" describes reach; 13 of those repositories have exercised it
+exactly once, on the change that added it.
+
+That reframes the cost too: each of those repositories stores an API credential
+for the lane. **A credential in 14 places, for a control 13 of them have used
+once, is the part worth acting on** — and none of the three measurements above
+would have surfaced it, because all three were asking whether the control
+*worked* rather than whether it was *used*.
+
+### A warning about measurement 3, because it nearly went wrong too
+
+The first attempt to scope pull requests to the post-install window returned
+**0** for every repository. That was not the answer — `gh --jq` does not accept
+`--arg`, so the filter errored and a shell default rendered the error as `0`.
+A positive control caught it: the same query with a date of `2020-01-01` also
+returned "0", which is impossible.
+
+```bash
+# run the same filter with a date that MUST match, before believing a zero
+```
+
+**Three instruments, three answers, and the fourth attempt was a broken query
+that agreed with the third.** Agreement with your previous result is not
+confirmation when the new instrument is silently failing.
 
 ### The three errors, which are the transferable part
 
