@@ -190,6 +190,37 @@ started *during* a request and continuing after the response
 was asking the right question.** When a negative result matters, have someone
 adversarially attack the *query*, not just the plumbing.
 
+### And the third variant: a control run against the wrong subject
+
+The query was right, the plumbing was right, and the control was run on a tree
+the filter would never see.
+
+An exclusion filter kept a small set of sensitive files out of a 123 GB upload.
+It was verified with a proper positive control — unfiltered, the excluded files
+were listed; filtered, they were gone — and recorded as verified.
+
+The filter matched paths of the form `SORTED BY YEAR/<date>/**`. But the upload
+does not run against the source tree; it runs against a **staged** tree built by
+an earlier step, whose paths begin `2011/`, `_PEOPLE/`, `_UNDATED/`. **The rule
+could never match anything it would actually be shown.** The control had been run
+against the source tree — it verified a deployment that will never execute.
+
+The exclusion did hold, by accident of a different mechanism: an earlier
+resolver step dropped those rows before the staging manifest was written
+(29,442 − 19 = 29,423 rows). So the *outcome* was safe and the *control* was
+theatre, which is the worst combination — it passes, and it teaches you to trust
+it.
+
+**Run the control against the artifact the check will actually be given**, not
+against the one you were looking at when you wrote it. If a pipeline transforms
+paths at any stage, a path-based control is only meaningful downstream of that
+transform.
+
+Found the same day, in the same pipeline: an invariant block that computed
+`ok = False` on failure and **never read the variable again**, with no
+`sys.exit`. It printed `FAIL` and exited 0. "Require invariants green" was a
+human reading stdout — see §1.
+
 ### The same lesson from the other direction: check precision, not just non-emptiness
 
 Contributed independently, and it sharpens the rule. A keyword scan over a
