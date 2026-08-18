@@ -240,9 +240,12 @@ Two consequences, and the second is the one that stings:
    run redundant. That justification was **correct**, and the evidence for it was
    invisible to the documented verification procedure. Right conclusion, unexamined
    mechanism.
-2. The same endpoint cannot see **bypass actors**. The ruleset above carries three at
-   `bypass_mode: always` — one `DeployKey` entry with `actor_id: null`, meaning *any*
-   deploy key with write access, present or future:
+2. Bypass actors live on the ruleset DETAIL endpoint — a third surface again, and one
+   the classic endpoint knows nothing about. They are perfectly observable once you ask
+   the right endpoint, which is the point: this is a *scope* failure, not an
+   unknowability. The ruleset above carries three at `bypass_mode: always`, one being a
+   `DeployKey` entry with `actor_id: null`, meaning *any* deploy key with write access,
+   present or future:
 
 ```
 $ gh api repos/OWNER/REPO/rulesets/20606587 \
@@ -300,6 +303,20 @@ which narration cannot satisfy while still having something after it to say.
 
 Rule: a sentinel must be unforgeable by the material under test — generate it per run —
 and a *required* marker must be positionally constrained, not merely present.
+
+**Positional constraint raises the cost; it does not make the marker unforgeable, and
+saying otherwise is the same overclaim this section is about.** If reviewed content
+quotes the marker at column 0 and the output truncates immediately after that quoted
+line, the quote *is* the last line and a truncated review passes. The last-line rule
+defeats every shape we actually observed, which is worth having, but the property it
+buys is "harder to satisfy by accident", not "impossible to satisfy by accident."
+
+The unforgeable version is the one already used for the refusal token, applied to the
+completion marker too: a **per-run nonce**, generated after the reviewed material is
+fixed, so no content under review can contain it. Ask for `VERDICT-<nonce>:` and the
+question stops being positional. That the same file already contained the technique and
+did not apply it to the second marker is itself the recurring shape — a lesson learned
+in one place and not carried across the room.
 
 ## 4b. Proportion the evidence to the surface, and report only what you ran
 

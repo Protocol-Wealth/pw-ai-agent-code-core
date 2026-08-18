@@ -212,12 +212,18 @@ Four levers, in the order they pay:
    rather than N point-patches applied under time pressure.
 4. **Slice the artefact.** A ten-round change is usually an oversized one.
 
-The counter-signal worth respecting: rounds are also where the *good* findings come
-from. In the same session, round eight of one change produced a defect that had
-survived every earlier round, and rounds nine and ten produced only re-litigation of
-decisions already taken deliberately. **Re-litigation, not a low count, is the reliable
-stop signal** — when a round asks you to re-add state you removed on purpose, the
-review has run out of new information about that artefact.
+**A plateau means ESCALATE, not stop** — and this is the correction worth stating
+explicitly, because the two are easy to conflate. The section above is right that a
+count which stops falling is a design signal; the response it calls for is structural
+(split the PR, question the shape), not termination. In the same session round eight of
+one change produced a defect that had survived every earlier round, so stopping on the
+plateau would have shipped it.
+
+The reliable STOP condition is different: **re-litigation, or an explicitly clean
+round.** When a round asks you to re-add state you removed on purpose, or to reverse a
+decision taken deliberately, the review has run out of new information about that
+artefact — rounds nine and ten produced exactly that. A low count on its own is not a
+stop signal in either direction.
 
 At that point another round is the wrong move. The artefact is too large or too
 wrongly-shaped to re-verify, and the correct responses are:

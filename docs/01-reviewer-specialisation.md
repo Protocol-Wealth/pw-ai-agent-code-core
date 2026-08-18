@@ -105,39 +105,41 @@ because it is the one nobody checks.
 
 ### A second, larger sample — and the reliability axis the first one missed
 
-A later session on the same harness ran **19 two-lane reviews** across three
-repositories (an application, a database-backed service, and shell operations code),
-same prompt, same diffs, lanes running in parallel:
+A later session on the same harness ran **27 review runs** across three repositories (an
+application, a database-backed service, and shell operations code), same prompt, same
+diffs. The denominators differ per lane and that difference is the finding, so state the
+sample precisely rather than as one number:
 
-| | lane A | lane B |
-|---|---|---|
-| lanes completed | **18 / 18** | **8 / 12** |
-| findings raised | 24 | 6 |
-| failure modes | none | 3 hard timeouts at the 600s ceiling, 1 turn-budget truncation |
+| | |
+|---|---|
+| review runs total | 27 |
+| of those, TWO-LANE attempts | 21 (six were deliberately single-lane during iteration) |
+| runs where **both** lanes completed | **14** — the paired sample |
+| lane A | completed 25 of 25 attempts |
+| lane B | completed 14 of 19 attempts (4 clock timeouts, 1 turn-budget truncation) |
 
-Two things this adds to the seven-round result above.
-
-**Disjointness held at a larger n.** Overlap was 3 across roughly twenty rounds. Each
-lane was again the sole finder of real defects. The clearest single case: on one change,
+**Disjointness is measured over the 14 paired runs**, not over all 27: a round where one
+lane never answered cannot show whether the two agree. Overlap across those was 3. Each
+lane was again the sole finder of real defects. The clearest single case: on one change
 lane B raised the P1 that invalidated the author's *entire approach* — a fix that only
-worked when a write happened to land inside a narrow sampling window — while lane A
-found three separate fail-open paths in the same diff and missed the structural flaw.
-Neither lane found the other's. A single-lane gate on **either** model ships a real
-defect that night.
+worked when a write happened to land inside a narrow sampling window — while lane A found
+three separate fail-open paths in the same diff and missed the structural flaw. Neither
+found the other's.
 
-**Completion is a separate axis from finding rate, and it is not visible in a
-findings table.** Lane B failed to finish a third of its runs, and on one particular
-file it failed three times out of four while completing 94–110 KB diffs elsewhere in
-the same session. Wall-clock tracked how much the agent chose to investigate, not diff
-size. Two consequences worth carrying:
+**Completion is a separate axis from finding rate, and it is invisible in a findings
+table.** Lane B failed to finish roughly a quarter of its attempts, and on one particular
+file it failed three times out of four while completing 94–110 KB diffs elsewhere in the
+same session. Wall-clock tracked how much the agent chose to investigate, not diff size.
 
 - **A timed-out lane is not a passed lane**, and a harness that reports the two the same
-  way turns a one-lane review into a two-lane claim. Report per-lane outcomes in the
-  artefact.
-- Do not tune the timeout down without the distribution. Here the successful runs
-  clustered *just under* the ceiling (roughly 360–590s against a 600s limit), so a
-  lower limit would have converted successes into failures rather than failing fast.
-  A plausible-sounding optimisation, refuted by the data it needed.
+  way turns a one-lane review into a two-lane claim. Report per-lane outcomes.
+- Do not tune the timeout down without the distribution — and do not tune it *up* without
+  one either. Here the successful runs clustered just under the ceiling, which the
+  operator first read as "the limit is correctly placed". Re-running one failure at three
+  times the ceiling finished in **615 seconds**, fifteen past the old limit, with a full
+  verdict and two real findings. Successes clustering just under a limit is equally the
+  signature of a limit severing runs mid-answer; only re-running *past* the ceiling
+  distinguishes the two.
 
 **Scope:** one operator, one harness, two model CLIs, a single session. Enough for
 disjointness and for the reliability asymmetry; **not** enough to rank the models, for
