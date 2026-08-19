@@ -103,10 +103,66 @@ then found two real defects in that same diff.
 clean verdict is the single most expensive thing a reviewer can be wrong about,
 because it is the one nobody checks.
 
+### A second, larger sample — and the reliability axis the first one missed
+
+A later run of the same harness covered **25 review runs** across four repositories (an
+application, a database-backed service, shell operations code, and a documentation repo),
+same prompt, same diffs. The denominators differ per lane and that difference IS the
+finding, so define the terms before the numbers:
+
+- an **attempt** is one lane selected on one run;
+- a run **reached the end** when every lane it selected printed a result, pass or fail
+  (runs still executing, and one killed mid-flight, are excluded — 25 of 28 logs);
+- a run is **paired** when both lanes were selected AND both completed. Only a paired run
+  can say anything about whether two reviewers agree.
+
+| | |
+|---|---|
+| runs that reached the end | 25 |
+| of those, both lanes selected | 21 (4 were deliberately single-lane while iterating) |
+| runs where **both** lanes completed | **15** — the paired sample |
+| lane A | completed 25 of 25 attempts (100%) |
+| lane B | completed 15 of 21 attempts (71%) |
+
+It reconciles, and the earlier version of this table did not: 25 + 21 = 46 lane-attempts,
+and 2×21 + 4 = 46. The previous figures implied 48 attempts against lane rows summing to
+44, and gave lane B a denominator smaller than the two-lane count — an arithmetic
+impossibility that both reviewers caught. A sample whose denominators do not add up cannot
+support a conclusion, however sound the conclusion happens to be.
+
+**Disjointness is measured over the 15 paired runs**, and mechanically: the harness prints
+a per-file map of which lane cited which file, so this is counted, not recalled. Across
+those runs, 28 files were flagged; **16 by both lanes and 12 by exactly one — 43% of all
+flagged files were found by a single lane.** Each lane was the sole finder of real
+defects. The clearest single case: on one change
+lane B raised the P1 that invalidated the author's *entire approach* — a fix that only
+worked when a write happened to land inside a narrow sampling window — while lane A found
+three separate fail-open paths in the same diff and missed the structural flaw. Neither
+found the other's.
+
+**Completion is a separate axis from finding rate, and it is invisible in a findings
+table.** Lane B failed to finish roughly a quarter of its attempts, and on one particular
+file it failed three times out of four while completing 94–110 KB diffs elsewhere in the
+same session. Wall-clock tracked how much the agent chose to investigate, not diff size.
+
+- **A timed-out lane is not a passed lane**, and a harness that reports the two the same
+  way turns a one-lane review into a two-lane claim. Report per-lane outcomes.
+- Do not tune the timeout down without the distribution — and do not tune it *up* without
+  one either. Here the successful runs clustered just under the ceiling, which the
+  operator first read as "the limit is correctly placed". Re-running one failure at three
+  times the ceiling finished in **615 seconds**, fifteen past the old limit, with a full
+  verdict and two real findings. Successes clustering just under a limit is equally the
+  signature of a limit severing runs mid-answer; only re-running *past* the ceiling
+  distinguishes the two.
+
+**Scope:** one operator, one harness, two model CLIs, two consecutive sessions on one
+estate. Enough for disjointness and for the reliability asymmetry; **not** enough to rank
+the models, for the same reasons stated below.
+
 ### What a proper comparison would still need
 
-The table above is one operator, one harness, three branches. It is enough to
-establish disjointness; it is not enough to rank. That needs the replay method
+The table above is 25 runs by one operator on one harness across four repositories,
+15 of them paired. It is enough to establish disjointness; it is not enough to rank. That needs the replay method
 below, and one refinement contributed alongside the data: **score unique finds by
 CATEGORY, not only by count.** The asymmetry lives in the categories — one
 reviewer's unique finds were scope errors in evidence, a class self-review is

@@ -493,6 +493,183 @@ past event.
 days and 66% over 7. A one-week read would have rejected a change that was
 justified. State the window with the number.
 
+### The right API, the wrong surface
+
+A verification can query a real, authoritative, correctly-authenticated endpoint and
+still not observe the rule it claims to have checked.
+
+An estate doc recorded that seven repositories were protected, "verified against the
+API" on a stated date. The verification used classic branch protection. The rule that
+actually gates merges lives in a **ruleset**, which is a different endpoint:
+
+```
+$ gh api repos/OWNER/REPO/branches/main/protection -q '.required_status_checks'
+                                    # empty
+
+$ gh api --paginate 'repos/OWNER/REPO/rulesets?includes_parents=true' \
+    -q '.[] | "\(.id)\t\(.name)\t\(.enforcement)\t\(.source_type)"'
+20606587        main    active  Repository
+
+$ gh api repos/OWNER/REPO/rulesets/20606587 \
+    -q '.rules[] | select(.type=="required_status_checks") | .parameters
+        | "strict=\(.strict_required_status_checks_policy)"'
+strict=true
+```
+
+**That is still not enough, and the gap is the same mistake one layer in.** A ruleset
+named `main` is not thereby a ruleset that governs `main`: the name is a label, and the
+scope lives in `target` and `conditions.ref_name`. An active ruleset can target tags, or
+`refs/heads/release/*`, and report `strict=true` while the branch under discussion is
+governed by nothing. Ask for the scope in the same breath as the rule:
+
+```
+$ gh api repos/OWNER/REPO/rulesets/20606587 \
+    -q '"target=\(.target)  include=\(.conditions.ref_name.include)  exclude=\(.conditions.ref_name.exclude)"'
+target=branch  include=["~DEFAULT_BRANCH"]  exclude=[]
+```
+
+`~DEFAULT_BRANCH` is a scope, not a branch name, so one more question is required and a
+reviewer was right to insist on it: that token proves the rule governs the DEFAULT branch,
+which is only `main` if `main` is the default. A repository whose default is `master` or
+`develop` returns exactly the output above while `main` is governed by nothing.
+
+```
+$ gh api repos/OWNER/REPO --jq .default_branch
+main
+```
+
+Only now does `strict=true` say anything about `main`. A verification that reads a rule
+without reading its scope has confirmed that a rule exists somewhere, which is a different
+claim from the one it is being used to support.
+
+`includes_parents` and `--paginate` are written out on purpose, and the reason is a small
+lesson in itself. Three review rounds took confident, opposite positions on that
+parameter's default — `true` (the listing was already complete), then `false` (it silently
+dropped inherited rules), then `false` again. The reference page, fetched 2026-08-18, says
+"Include rulesets configured at higher levels that apply to this repository. Default:
+`true`" — and none of the participants could settle it empirically from an account with no
+organisation above it. That stalemate, three rounds long, is the strongest argument this
+section makes: a reviewer's memory of an API default is not evidence, and neither is this
+document's.
+
+**So stop depending on the answer.** A verification whose correctness rests on a default
+nobody in the room can demonstrate is one argument away from being wrong, and writing out
+six characters removes the dependency entirely. Pagination is the same shape: 30 rulesets is
+not a plausible number today, which is exactly the kind of assumption that expires quietly.
+
+`source_type` is in the query for the related reason: the listing mixes repository rules
+with inherited ones, and the response is the only place that says WHERE a rule lives.
+Without it you will look in the repository settings for a rule defined an organisation
+above them.
+
+Two consequences, and the second is the one that stings:
+
+1. A change was justified on the grounds that a required strict check made a second CI
+   run redundant. That justification was **correct**, and the evidence for it was
+   invisible to the documented verification procedure. Right conclusion, unexamined
+   mechanism.
+2. Bypass actors live on the ruleset DETAIL endpoint — a third surface again, and one
+   the classic endpoint knows nothing about. They are perfectly observable once you ask
+   the right endpoint, which is the point: this is a *scope* failure, not an
+   unknowability. The ruleset above carries three at `bypass_mode: always`, one being a
+   `DeployKey` entry with `actor_id: null`, meaning *any* deploy key with write access,
+   present or future:
+
+```
+$ gh api repos/OWNER/REPO/rulesets/20606587 \
+    -q '.bypass_actors[]? | "\(.actor_type)\tid=\(.actor_id)\t\(.bypass_mode)"'
+DeployKey       id=null always
+Integration     id=1144995      always
+Integration     id=1236702      always
+```
+
+**Not checked:** whether any deploy key currently holds write on that repository — on
+the one inspected, `gh api repos/OWNER/REPO/keys` returned empty, so the exposure is
+latent rather than live. The two integrations were not identified; resolving an app id
+to a name needs `admin:org`, which the operator's token lacked.
+
+The generalisation: when a protection or policy claim matters, enumerate **every**
+surface that can express it, and re-verify after any platform migrates a feature from
+one to another. "We checked the API" names a method, not a scope.
+
+### A control that passes identically before and after is broken
+
+The negative-control rule above says a control must be shown to fail. The sharper
+version: **run it against the unfixed code too, and require the two runs to differ.**
+
+Three controls in one session passed on both versions, and each would have certified a
+fix that did nothing:
+
+| what was being tested | why the control could not fail |
+|---|---|
+| a reaper that kills orphaned child processes on interrupt | the script re-execs itself from a temp snapshot, so the pid matched by name was the pre-exec wrapper; the real process was never signalled |
+| a guard that flags a run which verified nothing | the chosen input already incremented that counter by another path, so both versions reported the same |
+| a turn-budget truncation guard | the input made the process exit non-zero, so an **older** guard caught it and the new one never ran |
+
+In all three the control was rewritten, not the fix. The tell is cheap and mechanical:
+**if the before and after runs produce the same output, the control is wrong until
+proven otherwise.** Only the third was noticed from the output alone; the other two
+were found by explicitly running the old version.
+
+### A marker the reviewed content can contain
+
+A harness that decides an outcome by searching output for a sentinel breaks in **both**
+directions once the reviewed material can contain that sentinel:
+
+- A fixed refusal token (`DIFF_UNREADABLE`) failed a *good* review, on the very commit
+  that introduced the literal — the diff contained it. Fixed with a per-run nonce
+  generated after the diff is written, so reviewed content cannot contain it.
+- The mirror image, in the same file months later: a completion guard required the
+  string `VERDICT:` to appear. That string occurs in the harness's own prompt and
+  comments, so a truncated review that quoted the file it was reviewing **passed**.
+
+Three successive narrowings were each defeated by a case a stub reproduced in one run:
+substring anywhere → the file contains it; anchored to line start → narration quoting
+the required format sits at column 0; within the last N lines → a three-line truncation
+puts the quote inside any small window. What held was **the last non-empty line**,
+which narration cannot satisfy while still having something after it to say.
+
+Rule: a sentinel must be unforgeable by the material under test — generate it per run —
+and a *required* marker must be positionally constrained, not merely present.
+
+**Positional constraint raises the cost; it does not make the marker unforgeable, and
+saying otherwise is the same overclaim this section is about.** If reviewed content
+quotes the marker at column 0 and the output truncates immediately after that quoted
+line, the quote *is* the last line and a truncated review passes. The last-line rule
+defeats every shape we actually observed, which is worth having, but the property it
+buys is "harder to satisfy by accident", not "impossible to satisfy by accident."
+
+A per-run nonce is the obvious next move, and it is worth being precise about what it
+buys, because the first version of this paragraph called it "unforgeable" — making the
+exact overclaim the section above is about, two paragraphs after making it. A reviewer
+caught that.
+
+A nonce generated after the reviewed material is fixed means **no content under review can
+contain it**. That is a collision guarantee, and it is the right fix for the refusal token,
+where the failure was a fixed sentinel appearing in the diff that defined it. It is *not*
+an authenticity guarantee for a completion marker: the nonce is handed to the model in the
+prompt, so a truncated answer can echo `VERDICT-<nonce>:` and stop there, and the guard
+accepts it. Same string, different threat — one is "reviewed text accidentally matches",
+the other is "the model's own output matches without meaning it".
+
+What actually helps, in the order it pays:
+
+1. **Check provenance, not position.** Every version of the guard asked where the marker
+   SITS; none asked where it CAME FROM. Requiring that the verdict line not appear verbatim
+   in the reviewed diff closes the observed shape completely, costs nothing, and cannot
+   fail a genuine one-sentence verdict. Implemented and pinned by a table test.
+2. **Signals from outside the model's output.** Process exit status, whether the timeout or
+   turn budget was reached, token counts, and structured-output validation enforced at the
+   tool-call layer rather than parsed out of prose. These are the only ones the model cannot
+   produce.
+3. **Positional constraints**, which raise the cost and are worth keeping, as long as nobody
+   writes "unforgeable" next to them.
+
+The residual is stated rather than implied: a lane could still quote a line from a file in
+its worktree that the diff does not contain. Narrower — it has to choose to read that file
+AND stop on that line — and the fix for it (requiring the nonce) trades a silent hole for a
+loud false negative on the flakier lane. Not taken without compliance data.
+
 ## 4b. Proportion the evidence to the surface, and report only what you ran
 
 Prior art: `AGENTS.md` in `deepseek-ai/deepseek-harness` (read 2026-08-17). Three

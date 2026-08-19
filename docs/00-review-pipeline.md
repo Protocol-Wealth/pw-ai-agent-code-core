@@ -188,8 +188,64 @@ Measured on one file: findings went `5, 3, 7, 4, 2, 5, 5, 3, 3, 4, 7` across
 eleven rounds, and a large share of later findings were defects introduced by the
 previous round's own fixes.
 
-At that point another round is the wrong move. The artefact is too large or too
-wrongly-shaped to re-verify, and the correct responses are:
+### Measure the fix-injection rate, not just the finding count
+
+A finding count that stops falling tells you *something about the artefact*. The **rate
+at which fixes create new defects** tells you what to change. Neither number tells you
+to stop — see the stop condition below, which is not a count at all.
+
+Measured on one change over ten rounds: nine real defects, of which **five were in code
+written to fix the previous round's finding**. That is roughly 0.55 injected defects per
+fix-round, and that loop did terminate — slowly, and every round of it cost a full review
+cycle.
+
+Treat that as a local measurement, not a convergence proof. A mean below 1.0 does not
+establish termination: injection is uneven across rounds, unresolved findings carry
+forward, and a later round can regress something an earlier one settled — all three
+happened in the same session. The useful reading is comparative (is this change injecting
+more than the last one?), not predictive.
+
+Four levers, in the order they pay:
+
+1. **Confirm the finding against the code before editing anything.** Fixing a false
+   positive injects a real defect *and* manufactures another round. In this estate two
+   rounds once asserted confidently that a model identifier was unregistered when it
+   was registered. A sixty-second check is cheaper than the round it prevents.
+2. **Turn a finding into a check before fixing it.** Write the failing assertion, then
+   fix. The assertion survives into later rounds and blocks the fix-on-fix regression
+   directly — which is the defect class being measured. On a repository with no test
+   suite this also builds one out of real defects, at no extra design cost.
+3. **Batch a round's findings into one considered change**, re-derived from intent,
+   rather than N point-patches applied under time pressure.
+4. **Slice the artefact.** A ten-round change is usually an oversized one.
+
+**A plateau means ESCALATE, not stop** — and this is the correction worth stating
+explicitly, because the two are easy to conflate. The section above is right that a
+count which stops falling is a design signal; the response it calls for is structural
+(split the PR, question the shape), not termination. In the same session round eight of
+one change produced a defect that had survived every earlier round, so stopping on the
+plateau would have shipped it.
+
+The reliable STOP condition is different: **re-litigation, or an explicitly clean
+round.** When a round asks you to re-add state you removed on purpose, or to reverse a
+decision taken deliberately, the review has run out of new information about that
+artefact — rounds nine and ten produced exactly that. A low count on its own is not a
+stop signal in either direction.
+
+When the review runs out of new information, another round of the SAME review is waste.
+That ends this review; it is not evidence the change is safe.
+
+Keep those two apart, because conflating them is the expensive version. This document
+records reviewers issuing confident clean verdicts while real defects remained — a lane
+reported clean on a commit where the other lane immediately found three — so "clean round"
+means *this reviewer has stopped producing information*, not *this change is correct*. The
+move after a clean round is an INDEPENDENT check: a different model, a test that fails on
+the defect class, or a deterministic check that does not have opinions. Ship on the
+strength of that, never on the strength of a lane going quiet.
+
+The PLATEAU is the case that calls for structural work, and it is worth keeping the two
+apart because they arrive looking identical — a round that found little. On a plateau the
+artefact is usually too large or too wrongly-shaped to re-verify, and the responses are:
 
 - **split the PR** — remove everything not required for the guarantee it makes;
 - **question the shape** — in the case above, a shell script had accumulated YAML
@@ -206,8 +262,14 @@ artefact*:
 | Rounds | Action |
 |---|---|
 | 1–2 | Normal: single adversarial reviewer, fix, re-review |
-| **2** | **If the count has not fallen, STOP.** Get an independent opinion from a **different model**, and ask it the **structural** question — *"what is wrong here that neither of us has articulated?"* — not the local one. Line-level reviewers saturate; they keep finding the next symptom |
+| **2** | **If the count has not fallen, stop THIS LANE — not the review.** Get an independent opinion from a **different model**, and ask it the **structural** question — *"what is wrong here that neither of us has articulated?"* — not the local one. Line-level reviewers saturate; they keep finding the next symptom |
 | **3+** | **Splitting is the default** and continuing is what needs justification |
+
+The wording in that middle row is load-bearing and used to read just "STOP", which
+contradicted the section above it: a plateau means escalate. Two reviewers flagged the
+contradiction, and both readings are damaging in opposite directions — stop early and you
+ship an unexamined plateau, escalate without ending the saturated lane and you pay for
+another round of the next symptom.
 
 **This ladder used to say 1–4 normal, ~5 structural, ~7 split.** It was revised
 down on 2026-08-18 against the measurement above: rounds 3–5 on the PR that ran
