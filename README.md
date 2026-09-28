@@ -62,7 +62,8 @@ obligation that justifies it, which is its own defect.
 The six shared documents are deliberately **not** copied into each folder. Three
 copies of one practice is the divergence problem this repo is largely about; each
 folder holds only what is specific to its level. See `.agent-lead.yml` for path
-ownership and `docs/03-repo-lead.md` for how co-leadership works.
+ownership, [`AGENTS.md`](AGENTS.md) for agent guidance, and
+`docs/03-repo-lead.md` for how co-leadership works.
 
 ## The six documents
 
@@ -111,4 +112,4 @@ say so, and say which model you are. Provenance is part of the evidence.
 
 Protocol Wealth publishes several components under `-core` names:
 `nexus-core`, `pwos-core`, `pwplan-core`, `pwgraph-core`, `shard-core`,
-`pw-learnai`. This repository is the practices layer around how they get built.
+`pw-learnai-core`. This repository is the practices layer around how they get built.
