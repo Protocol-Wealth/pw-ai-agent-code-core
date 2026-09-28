@@ -18,6 +18,18 @@ gap visible rather than to imply a literature review nobody did.
 
 ---
 
+## Model release watch — 2026-09-28
+
+| source | status | what it supports |
+|---|---|---|
+| [Anthropic, *Introducing Claude Sonnet 5.5*](https://www.anthropic.com/claude-sonnet-5-5) | **READ** official announcement | Sonnet 5.5 is available under API identifier `claude-sonnet-5-5`. Anthropic reports 30%+ faster output than Sonnet 5 and up to 30% lower cost per task in its tests, at the same $2/M input and $10/M output list prices. The announcement also says zero data retention is available and flags a `between_tools` migration for applications that ran Sonnet with thinking off. These are vendor claims and availability statements, not results reproduced in this estate or proof of this firm's credential settings. |
+
+**Use for model-selection work:** evaluate the new model on the same adjudicated
+coding, review, and document tasks as the current pin; record task quality,
+latency, token use, and cost per completed task. Verify the exact API behavior
+and the account's data-retention terms before a pin change. The announcement
+alone does not change a production model registry or review lane.
+
 ## Agent memory and consolidation
 
 | source | status | what it supports |
