@@ -53,6 +53,30 @@ in `docs/` without a concrete failure and a check that can fail.
 | [Agent Memory Benchmark](https://github.com/vectorize-io/agent-memory-benchmark) | **READ** README | Retrieval-only cases can mark irrelevant memories as failures, rather than hiding them in answer quality. The benchmark authors also develop Hindsight, so compare independent baselines. |
 | [XDA local-agent context report](https://www.xda-developers.com/stopped-my-local-llm-agent-from-running-out-of-context/) | **READ** article (secondary) | One hardware-specific account of context exhaustion and runner configuration. Verify settings against [LM Studio's load API](https://lmstudio.ai/docs/developer/rest/load) (**READ** primary) before turning numbers into advice. |
 
+### Agent context and instruction efficiency reviewed 2026-09-28
+
+**READ** means the linked primary README, PR, or full paper was opened. The XDA
+article was read through a text mirror because its site blocked direct retrieval;
+it is a personal workflow report, not a controlled measurement. None of these
+sources has been run as a tool or reproduced on this repository.
+
+| source | status | useful observation and limit |
+|---|---|---|
+| [Backpass](https://github.com/kunchenguid/backpass) | **READ** README | It proposes instruction edits from actual session transcripts, keeps analysis separate from application, and attaches session evidence to proposals. Its two-session evidence threshold helps filter one-off anecdotes; human review and behavior tests still decide whether a rule moves. Transcripts can contain sensitive data, so scope and redaction need review before using a hosted agent to analyze them. |
+| [FirstMate instruction PR #5872](https://github.com/kunchenguid/firstmate/pull/5872) | **READ** PR | A reported roughly 48% reduction moved situational guidance from a large `AGENTS.md` into on-demand skills. A side-by-side behavior check exposed lost or late-triggered guidance, prompting follow-up edits. The transferable check is task success **and** skill trigger timing against representative old sessions, alongside token cost. Its result is a case study, not a target percentage for other repos. |
+| [JAZ paper, *Harness as a Language*](https://arxiv.org/html/2609.26891v1) | **READ** full paper | Exposing the full interaction history as a programmatically searchable variable let an agent recover exact old details after context handoff; hooks supplied budget, validation, recursion, and trajectory controls. In the authors' StuLife far-recall subset, JAZ reached 69.9% pass rate versus Letta's 61.8% across three runs; AppWorld self-improvement used six runs. Those benchmark-specific results motivate a retrieval comparison, not replacing a deployed memory system without local evaluation. |
+| [XDA token-saving workflow report](https://www.xda-developers.com/claude-code-token-saving-tricks-nobody-talks-about/) | **READ** article (secondary) | Scope known work to relevant paths; choose reasoning effort for task difficulty; keep stable repo rules in the project guidance file and one-off constraints in the task; reduce PDF noise before deeper analysis. For this estate the shared entry point is `AGENTS.md`. Measure whether a shorter prompt or PDF digest omits evidence before claiming savings. The article supplies no controlled comparison across repositories. |
+
+**Candidate evaluation, not adopted policy:** take a small set of representative
+tasks, including ones that need rare compliance or release rules. Record baseline
+instruction tokens, whether each required rule was loaded at the right time,
+task outcome, and cost. Move a rule to an on-demand skill only when those tasks
+still pass and the skill trigger is observable. For long-history tasks, compare a
+summary-only handoff with exact-source retrieval and check whether citations point
+to the original transcript entry rather than the agent's recollection. Keep raw
+transcripts out of public repositories and preserve a human review step before
+instruction or durable-memory edits.
+
 ## Verification and review method
 
 | source | status | what it supports |
