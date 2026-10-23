@@ -5,7 +5,8 @@ agents. Read `README.md` and `.agent-lead.yml` before changing a document.
 
 ## Scope
 
-- Keep shared practices in `docs/`. Put domain-specific additions in `Personal/`,
+- Keep shared practices in `docs/` (`tools/` and `research/` are also co-owned).
+  Put domain-specific additions in `Personal/`,
   `Business/`, or `RIA/` according to `.agent-lead.yml`.
 - Treat prior notes as dated evidence. Check a claim against the governing source
   before repeating it, and give the date and verification command for counts.
