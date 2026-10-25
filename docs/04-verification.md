@@ -557,9 +557,9 @@ nobody in the room can demonstrate is one argument away from being wrong, and wr
 six characters removes the dependency entirely. Pagination is the same shape: 30 rulesets is
 not a plausible number today, which is exactly the kind of assumption that expires quietly.
 
-A vendor's product default is the same trap with more at stake. A plan for a transaction
-policy engine asserted that its default action was *block*; the vendor's documentation says
-a new workspace's factory settings require no approvals at all. The plan's safety argument
+A vendor's product default is the same trap with more at stake. A design for a transaction
+policy engine assumed its default action was *block*; when someone read the vendor's
+documentation, the default turned out to be permissive. The design's safety argument
 rested on a default nobody had read. **Never assume a vendor default: set every
 security-relevant value explicitly, then read it back from the running system.** The
 explicit value removes the dependency on memory; the read-back proves the value took.
@@ -762,9 +762,8 @@ before acting on it.** This includes notes you wrote yourself an hour ago.
 
 A register that lists documents and copies each one's version and date holds a second
 copy of facts the documents already state, and the copies drift. One such register,
-checked against the documents it listed, recorded an appointment as of unknown status
-when the executed copy was on file, labelled an addendum as a different instrument, and
-pointed at an agreement a later one had superseded. **A list records only location.**
+checked against the documents it listed, disagreed with them on status, on what one
+document was, and on which version was current. **A list records only location.**
 Read version, date and status from the document itself each time; a register that
 needs them derives them rather than storing them.
 

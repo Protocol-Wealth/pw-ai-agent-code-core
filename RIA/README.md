@@ -118,7 +118,7 @@ hardest on regulated paths, because the failure is always *silent success*:
 
 A policy engine in front of a wallet — an MPC co-signer, a smart-account module, a
 signing service — is a guard, and `../docs/04-verification.md` §1 applies: ask what
-it lets through. A design that pins **the recipient to the client's own wallet**
+it lets through. A design that pins **the recipient to the wallet's own address**
 reads as complete. It is not, because the recipient is one of several fields a call
 uses to move value.
 
