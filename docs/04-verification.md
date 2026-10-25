@@ -557,6 +557,13 @@ nobody in the room can demonstrate is one argument away from being wrong, and wr
 six characters removes the dependency entirely. Pagination is the same shape: 30 rulesets is
 not a plausible number today, which is exactly the kind of assumption that expires quietly.
 
+A vendor's product default is the same trap with more at stake. A plan for a transaction
+policy engine asserted that its default action was *block*; the vendor's documentation says
+a new workspace's factory settings require no approvals at all. The plan's safety argument
+rested on a default nobody had read. **Never assume a vendor default: set every
+security-relevant value explicitly, then read it back from the running system.** The
+explicit value removes the dependency on memory; the read-back proves the value took.
+
 `source_type` is in the query for the related reason: the listing mixes repository rules
 with inherited ones, and the response is the only place that says WHERE a rule lives.
 Without it you will look in the repository settings for a rule defined an organisation
@@ -591,6 +598,28 @@ to a name needs `admin:org`, which the operator's token lacked.
 The generalisation: when a protection or policy claim matters, enumerate **every**
 surface that can express it, and re-verify after any platform migrates a feature from
 one to another. "We checked the API" names a method, not a scope.
+
+### A research synthesis is not done until a fresh reader opens every citation
+
+A synthesis built from many sources — a regulatory analysis, a vendor comparison — reads
+as verified because every claim carries a link. The link is not the check. A fresh agent,
+given one such synthesis without the author's reasoning and told to open every cited URL,
+found in a single pass:
+
+- a requirement attributed to the wrong rule;
+- a deployment option the vendor does not offer;
+- a quotation that does not appear in the document it was attributed to;
+- a vendor feature the analysis said was missing;
+- paragraph numbering that did not match the source;
+- three places where the analysis had decided something that was the owner's to decide
+  (see [`RIA/` — what routes to a human](../RIA/README.md#what-routes-to-a-human)).
+
+None of these was visible from the synthesis itself. **The rule:** the work is not done
+until a separate reader has opened every cited URL and recorded, per citation, whether the
+quoted text is there, its date, and its status — **binding, guidance, proposal, or
+withdrawn**. A proposed rule cited as if adopted is the wrong-authority error arriving
+through a link. [`research/`](../research/README.md) applies the same discipline to
+sources (READ / CITED / UNREAD); a synthesis needs it per claim.
 
 ### A control that passes identically before and after is broken
 
@@ -714,6 +743,12 @@ Write the command, not the number. ">100 clauses" was written twice from memory
 when the measured values were 95 and 68. If a count must appear in prose, put the
 command that produces it next to the number — or make a test assert it.
 
+**The same holds for any claim about state outside the checkout**: that a secret exists
+in a cloud secret store, that a file sits in a particular shared-drive folder, that an
+alert routes to a given channel. Nothing in the repository can confirm these, and neither
+can a reader unless the claim carries the exact command that reproduces it. A claim
+without one is graded **UNVERIFIED** in the text, not left to read as fact.
+
 ## 6. Prior notes are dated claims, not facts
 
 Anything a previous session wrote — a handoff, a decision record, a status document
@@ -722,6 +757,16 @@ outage as live for ten days.
 
 If a record names a file, a flag, a count or a version, **verify it still holds
 before acting on it.** This includes notes you wrote yourself an hour ago.
+
+### A hand-kept register drifts from the documents it lists
+
+A register that lists documents and copies each one's version and date holds a second
+copy of facts the documents already state, and the copies drift. One such register,
+checked against the documents it listed, recorded an appointment as of unknown status
+when the executed copy was on file, labelled an addendum as a different instrument, and
+pointed at an agreement a later one had superseded. **A list records only location.**
+Read version, date and status from the document itself each time; a register that
+needs them derives them rather than storing them.
 
 ## 7. Classify findings before fixing
 
@@ -770,6 +815,11 @@ a decision log, a release note — describes what was true when written. Rewriti
 it to match current behaviour makes the history wrong in order to fix a document
 that was not making a present-tense claim. Sweep the whole repository, then decide
 per hit; say which ones you deliberately left.
+
+The same classification comes **before any proposed edit**, not only before a sweep. A
+reviewer asked to improve a document proposes in-place corrections to a dated record as
+readily as to a living one. Decide first which the artifact is: a living document is
+edited; a dated record is superseded by a new dated record that says what changed.
 
 ## 8. Shell-specific traps that produce silent success
 

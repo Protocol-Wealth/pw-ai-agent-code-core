@@ -55,6 +55,14 @@ Rejections matter more than acceptances. They are what stops the same false
 finding costing time in round 4, and feeding them back into later rounds measurably
 reduces re-litigation.
 
+**A reviewer's suggested fix is a claim too.** One review paired a real finding with
+a one-line fix. The value that fix produced fed a field the consuming schema declared
+`min(1)` (zod); applied as written, it would have failed validation and blanked the
+page that read it. Check a suggested fix against the artifact's consumer — the schema,
+the contract, the caller — before applying it, or mark it **UNVERIFIED** in the
+adjudication. It is `04` §3 again: assert against the artifact that defines the
+contract.
+
 ## The gate, and why we deleted it
 
 We ran a required CI check that verified an adjudicated review existed for a

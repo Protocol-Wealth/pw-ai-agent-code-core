@@ -48,7 +48,31 @@ letter and the **wrong entity**.
 
 When an AI agent produces regulatory language, treat every citation as a claim
 requiring a source. The cheapest habit that works: paste the rule's own words next
-to the claim in the PR, and let the reviewer compare.
+to the claim in the PR, and let the reviewer compare. Record whether the cited text
+is **binding, guidance, a proposal, or withdrawn** — a proposed rule cited as if
+adopted is a wrong-authority error. For a synthesis built on many sources, see
+[`04` §4 — a fresh reader opens every citation](../docs/04-verification.md#a-research-synthesis-is-not-done-until-a-fresh-reader-opens-every-citation).
+
+## Consent wording must be true on the day it is accepted
+
+A client consent or authorisation is read once, on the day it is accepted, and holds
+the firm to every sentence from then on. Drafted alongside a feature still being
+built, it tends to describe the design rather than the system. A review of one draft
+grant — authorising automated operations on a client's wallet — found that it:
+
+- described controls that were planned but not yet enforced;
+- named the transfers but not that **network fees leave the wallet** on every action;
+- stated a cap without saying whether it applied **per action or in total**;
+- authorised swaps without naming them;
+- said the client could stop at any time, without saying that stopping **does not
+  close open positions or recall transactions already in flight**.
+
+**The check:** for each sentence, name the code, configuration or policy that makes it
+true *today*, and cut or defer any sentence with nothing behind it. Then list every
+material action the grant covers and confirm each one is named. A control described
+before it exists is the practice-written-as-obligation failure above, with a client's
+signature under it. The final wording still routes to a human (below); this is the
+evidence they need to decide it.
 
 ## Documents: know which kind you are holding
 
@@ -90,6 +114,41 @@ hardest on regulated paths, because the failure is always *silent success*:
   audit event; the way to know is to enumerate the write paths and check, not to
   assume the wrapper was used.
 
+## A transaction allow-list must pin every field that moves value
+
+A policy engine in front of a wallet — an MPC co-signer, a smart-account module, a
+signing service — is a guard, and `../docs/04-verification.md` §1 applies: ask what
+it lets through. A design that pins **the recipient to the client's own wallet**
+reads as complete. It is not, because the recipient is one of several fields a call
+uses to move value.
+
+The instance is public and checkable. In Uniswap v3's `NonfungiblePositionManager`,
+`decreaseLiquidity`, `collect` and `burn` carry `isAuthorizedForToken(tokenId)`;
+`increaseLiquidity` does not
+([v3-periphery `24ccf01`, lines 198–262](https://github.com/Uniswap/v3-periphery/blob/24ccf014fe7f81d74a14c1689d6fdf123f280e45/contracts/NonfungiblePositionManager.sol#L198-L262)).
+Anyone may add liquidity to any position. A policy that allows `increaseLiquidity`
+without pinning `tokenId` lets a signed call move the wallet's tokens into a position
+someone else owns, and no recipient field is involved. The same review found two more:
+
+- **The pool is chosen by `(token0, token1, fee)`**
+  ([`LiquidityManagement.sol`](https://github.com/Uniswap/v3-periphery/blob/24ccf014fe7f81d74a14c1689d6fdf123f280e45/contracts/base/LiquidityManagement.sol#L61-L63)).
+  An unpinned fee tier lets a mint or swap target a thin pool of the same pair whose
+  price has been moved.
+- **`amount0Min` / `amount1Min` of zero switch off the only slippage check**
+  (`'Price slippage check'`), so a recipient-correct call can still lose most of its
+  value to a manipulated price. An unbounded `deadline` leaves a signed call valid
+  until whenever executing it suits someone else.
+
+**The rule: pin every value-bearing field** — pool or fee tier, position id, non-zero
+minimums, a bounded deadline — not only the destination, **and deny any call the
+policy engine cannot pin.** A function the policy language cannot constrain field by
+field is a call the policy cannot see into; allowing it because the recipient matched
+is a check that cannot fail on everything else.
+
+**How it was caught:** reading the contract source for each allowed function, rather
+than the policy's description of what it permitted. **Not checked:** position-manager
+forks on other chains, and Uniswap v4, whose hooks change the question again.
+
 ## Client data
 
 - **Never** put client data, `.env` contents, or credentials into a document tree,
@@ -113,6 +172,22 @@ Agents do not decide these, whatever their confidence:
 
 An agent's job on these is to assemble the evidence, name the options with their
 trade-offs, and say plainly which parts it verified and which it did not.
+
+**Routing a decision is not withholding a recommendation, or inventing a step.**
+Three shapes of getting it wrong:
+
+- **No recommendation.** An options list with no "do this, because" hands the analysis
+  back unfinished. Cite the rule text, recommend, and let the owner decide.
+- **An invented gate.** An approval, sign-off or review step that no documented policy
+  requires is a control nobody required — see
+  [`00` — the gate, and why we deleted it](../docs/00-review-pipeline.md#the-gate-and-why-we-deleted-it).
+  A technical dependency ("this needs X deployed first") is sequencing, not a gate.
+- **"Ask counsel" by default.** That is a recommendation like any other and is owed a
+  reason: name the question counsel would answer that the rule text does not.
+
+The mirror failure is deciding instead of routing. A citation pass over one research
+synthesis found three places where the analysis had settled an item on the list above
+rather than raising it.
 
 ## Contributing from the other domains
 

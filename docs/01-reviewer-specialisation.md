@@ -159,6 +159,15 @@ same session. Wall-clock tracked how much the agent chose to investigate, not di
 estate. Enough for disjointness and for the reliability asymmetry; **not** enough to rank
 the models, for the same reasons stated below.
 
+### The same disjointness on prose
+
+October 2026, one written analysis reviewed over several rounds: a reviewer from a
+different vendor caught a wrong attribution that two rounds from the author's own vendor
+had passed, and those same-vendor rounds caught defects the different-vendor lane did not.
+One document, so it ranks nothing. It is the disjointness result again, on prose rather
+than a diff, and evidence for `00`'s claim that a different vendor is the version of
+"more review" that buys new information.
+
 ### What a proper comparison would still need
 
 The table above is 25 runs by one operator on one harness across four repositories,
