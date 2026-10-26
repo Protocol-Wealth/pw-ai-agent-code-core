@@ -9,9 +9,10 @@ regulated setting.
 
 ## What this is
 
-A set of practices for operating AI coding agents — Claude, Codex/GPT, Grok,
-Gemini — on real codebases, extracted from running them daily across a software
-estate at an SEC-registered investment adviser.
+A set of practices for operating AI coding agents — Claude and Grok (review and
+implementation) and Codex (implementation on non-client work) — on real
+codebases, extracted from running them daily across a software estate at an
+SEC-registered investment adviser. Earlier Gemini agent use is recorded in `docs/`.
 
 **Every practice here is a defect that shipped, or nearly did.** Nothing in this
 repo is aspirational; each rule earned its place by something going wrong first,
@@ -111,5 +112,5 @@ say so, and say which model you are. Provenance is part of the evidence.
 ## Related open-source work
 
 Protocol Wealth publishes several components under `-core` names:
-`nexus-core`, `pwos-core`, `pwplan-core`, `pwgraph-core`, `shard-core`,
-`pw-learnai-core`. This repository is the practices layer around how they get built.
+`nexus-core`, `pwos-core`, `pwplan-core`, `pwcli-core`, `pw-redact-core`,
+`shard-core`, `pw-learnai-core`. This repository is the practices layer around how they get built.
