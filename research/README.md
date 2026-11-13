@@ -33,6 +33,26 @@ record it exists to protect. A cheaper component addresses the same diagnosis:
 compare what a session **did** against what it **wrote**, and alarm on the
 mismatch. That measures absence; a consolidator manufactures presence.
 
+### Memory and context references reviewed 2026-09-28
+
+The **READ** status below means the project's README or the linked primary
+documentation was opened, not that its code was audited, installed, or run.
+These sources sharpen the open objection above; none establishes a new practice
+in `docs/` without a concrete failure and a check that can fail.
+
+| source | status | what it supports or challenges |
+|---|---|---|
+| [Mem0](https://github.com/mem0ai/mem0) | **READ** README | Multi-scope, additive facts and combined retrieval are candidate patterns. Its 2026 headline benchmark scores are explicitly for its managed platform, not the open-source SDK. |
+| [Hindsight](https://github.com/vectorize-io/hindsight) | **READ** README | Separate retain, recall, and reflect operations, plus multiple retrieval signals. Reflection needs a clear boundary between evidence and model interpretation. |
+| [memU](https://github.com/NevaMind-AI/memU) | **READ** README | Session-to-skill distillation exposes the exact transcript-to-authoritative-instruction promotion risk described above. Its host adapters can patch agent instruction files. |
+| [Cognee](https://github.com/topoteretes/cognee) | **READ** README | Explicit remember, recall, improve, and forget lifecycle; session knowledge can be promoted into longer-lived memory. |
+| [Graphiti](https://github.com/getzep/graphiti) | **READ** README | Dated fact validity and episode provenance are useful checks against stale or unsourced claims. |
+| [OpenViking](https://github.com/volcengine/OpenViking) | **READ** README | Scoped directory search and abstract/overview/detail loading can reduce unnecessary context. Main-project AGPL-3.0 licensing rules out copying code into permissively licensed projects. |
+| [Letta](https://github.com/letta-ai/letta) and [Letta Code](https://github.com/letta-ai/letta-code) | **READ** READMEs | Letta points to Letta Code as current source; editable, versioned agent context is useful prior art and a reminder that self-edits need review. |
+| [OpenMemory](https://github.com/mem0ai/openmemory) | **READ** README | Selective cross-harness session transfer is possible; moving a raw transcript changes its data boundary. Realtime autosync is listed as planned. |
+| [Agent Memory Benchmark](https://github.com/vectorize-io/agent-memory-benchmark) | **READ** README | Retrieval-only cases can mark irrelevant memories as failures, rather than hiding them in answer quality. The benchmark authors also develop Hindsight, so compare independent baselines. |
+| [XDA local-agent context report](https://www.xda-developers.com/stopped-my-local-llm-agent-from-running-out-of-context/) | **READ** article (secondary) | One hardware-specific account of context exhaustion and runner configuration. Verify settings against [LM Studio's load API](https://lmstudio.ai/docs/developer/rest/load) (**READ** primary) before turning numbers into advice. |
+
 ## Verification and review method
 
 | source | status | what it supports |
