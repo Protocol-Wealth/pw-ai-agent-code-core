@@ -13,7 +13,7 @@ A set of practices for operating AI coding agents — Claude (design,
 implementation and review), Grok (implementation; its review lane is dormant)
 and Codex (implementation on non-client work) — on real
 codebases, extracted from running them daily across a software estate at an
-SEC-registered investment adviser. Earlier Gemini agent use is recorded in `docs/`.
+SEC-registered investment adviser. Gemini, used earlier, no longer has an agent lane.
 
 **Every practice here is a defect that shipped, or nearly did.** Nothing in this
 repo is aspirational; each rule earned its place by something going wrong first,
