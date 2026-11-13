@@ -9,8 +9,9 @@ regulated setting.
 
 ## What this is
 
-A set of practices for operating AI coding agents — Claude and Grok (review and
-implementation) and Codex (implementation on non-client work) — on real
+A set of practices for operating AI coding agents — Claude (design,
+implementation and review), Grok (implementation; its review lane is dormant)
+and Codex (implementation on non-client work) — on real
 codebases, extracted from running them daily across a software estate at an
 SEC-registered investment adviser. Earlier Gemini agent use is recorded in `docs/`.
 
